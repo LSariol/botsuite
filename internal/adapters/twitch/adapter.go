@@ -186,7 +186,6 @@ func (t *TwitchClient) Read() {
 					cmd, body := parseCommand(message.Payload.Event.Message.Text)
 					var envelope event.Envelope = Pack(&message, cmd, body)
 
-					fmt.Println("TwitchBot sending message to registry")
 					t.msgs <- envelope
 				}
 				fmt.Printf("%s @%s: %s\n", message.Payload.Event.BroadcasterUserName, message.Payload.Event.ChatterUserName, message.Payload.Event.Message.Text)

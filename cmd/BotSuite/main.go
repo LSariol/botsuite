@@ -3,7 +3,9 @@ package main
 import (
 	"context"
 	"log"
+	"os"
 	"os/signal"
+	"syscall"
 
 	"github.com/lsariol/botsuite/internal/adapters/twitch"
 	"github.com/lsariol/botsuite/internal/app"
@@ -19,7 +21,7 @@ func main() {
 		log.Fatal("Error loading deps %w")
 	}
 
-	ctx, stop := signal.NotifyContext(context.Background())
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
 	// Create Registry
@@ -63,5 +65,6 @@ func main() {
 		}
 	}()
 
-	select {}
+	<-ctx.Done()
+
 }

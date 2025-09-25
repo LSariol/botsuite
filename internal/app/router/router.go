@@ -48,17 +48,7 @@ func (r *Router) Run(ctx context.Context, deps *app.Deps) {
 
 			cmd, ok := r.registryLookUp(env)
 			if !ok {
-
-				r.outbound <- event.Response{
-					Platform:    env.Platform,
-					Username:    env.Username,
-					UserID:      env.UserID,
-					ChannelName: env.ChannelName,
-					ChannelID:   env.ChannelID,
-					Text:        "Error: Command not found in registry.",
-					Error:       true,
-					Success:     false,
-				}
+				continue
 			}
 
 			var resp event.Response = Dispatch(ctx, env, cmd, deps)
