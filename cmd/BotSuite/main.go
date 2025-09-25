@@ -2,48 +2,66 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
+	"os/signal"
 
 	"github.com/lsariol/botsuite/internal/adapters/twitch"
 	"github.com/lsariol/botsuite/internal/app"
+	"github.com/lsariol/botsuite/internal/app/registry"
+	"github.com/lsariol/botsuite/internal/app/router"
 )
 
 func main() {
 
-	deps, err := app.NewDeps()
+	// Create Dependencies
+	deps, err := app.NewDependencies()
 	if err != nil {
 		log.Fatal("Error loading deps %w")
 	}
 
-	var twitchBot twitch.TwitchBot = twitch.NewTwitchBot(deps.HTTP, &deps.Config.Twitch)
+	ctx, stop := signal.NotifyContext(context.Background())
+	defer stop()
 
+	// Create Registry
+	var register *registry.Registry = registry.NewRegistry()
+	registry.RegisterAll(register)
+
+	// Create Router
+	router := router.NewRouter(ctx, register)
+
+	// Create TwitchClient
+	var twitchBot twitch.TwitchClient = *twitch.NewTwitchBot(deps.HTTP, &deps.Config.Twitch)
 	if err := twitchBot.Init(); err != nil {
 		log.Fatal(err)
 	}
 
-	ctx := context.Context(context.Background())
-	var registry app.Registry = *app.NewRegistry()
+	// Start Threads
 
+	// Start Router
+	go router.Run(ctx, deps)
+
+	// Start TwitchBot Reading
 	go twitchBot.Read()
-
-	go registry.Run(ctx)
-
-	fmt.Println("Both running")
 
 	go func() {
 		for env := range twitchBot.Envelopes() {
-			registry.Inbound() <- env
+			router.Inbound() <- env
 		}
 	}()
 
-	for resp := range registry.Outbound() {
-		twitchBot.Chew(resp)
-	}
+	go func() {
+		for resp := range router.Outbound() {
 
-	//Idea
-	//twitchBot.Run() <- replaces Read()
-	//run will start a thread for reading messages.
-	//ctx, cancel := context.WithCancel(context.Background())
-	//twitchBot.Run()
+			switch resp.Platform {
+			case "twitch":
+				twitchBot.Chew(resp)
+			case "discord":
+				//discord Chew
+				continue
+			}
+
+		}
+	}()
+
+	select {}
 }

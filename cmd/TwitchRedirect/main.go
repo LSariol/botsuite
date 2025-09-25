@@ -16,11 +16,11 @@ func main() {
 }
 
 func setUpNewUser() {
-	userToken := "8dovfbewztk2nywtls66qkb1jm24t3"
+	userToken := "ztmn1rfniu340rfnxv5xy1fdsgiblo"
 	var userData auth.UserData
 	var success *auth.VerificationSuccess
 
-	deps, err := app.NewDeps()
+	deps, err := app.NewDependencies()
 	if err != nil {
 		log.Fatal("Error loading deps")
 	}

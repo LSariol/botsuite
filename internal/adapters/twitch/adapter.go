@@ -12,25 +12,13 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/lsariol/botsuite/internal/adapters/twitch/auth"
+	"github.com/lsariol/botsuite/internal/app/event"
 	"github.com/lsariol/botsuite/internal/bot"
 	"github.com/lsariol/botsuite/internal/config"
-	"github.com/lsariol/botsuite/internal/event"
 )
 
-type TwitchBot interface {
+type TwitchClient struct {
 	bot.Bot
-	EstablishConnection() error
-	SendChat(msg string, channelID string) error
-	Command(msg string) error
-	Subscribe(channelID string) error
-	Read()
-	Disconnect()
-	Close()
-	Envelopes() <-chan event.Envelope
-	Chew(msg event.Response)
-}
-
-type twitchClient struct {
 	HTTP        *http.Client
 	WS          *websocket.Conn
 	Config      *config.TwitchConfig
@@ -38,20 +26,20 @@ type twitchClient struct {
 	msgs        chan event.Envelope
 }
 
-func NewTwitchBot(client *http.Client, cfg *config.TwitchConfig) TwitchBot {
-	return &twitchClient{
+func NewTwitchBot(client *http.Client, cfg *config.TwitchConfig) *TwitchClient {
+	return &TwitchClient{
 		HTTP:   client,
 		Config: cfg,
 		msgs:   make(chan event.Envelope, 100),
 	}
 }
 
-func (t *twitchClient) Run() {
+func (t *TwitchClient) Run() {
 
 }
 
 // Initilizes TwitchClient object with values and establishes connections and subscriptions
-func (t *twitchClient) Init() error {
+func (t *TwitchClient) Init() error {
 
 	if err := t.RefreshTokens(); err != nil {
 		return fmt.Errorf("Init: %w", err)
@@ -79,7 +67,7 @@ func (t *twitchClient) Init() error {
 }
 
 // Connects to twitch Websocket
-func (t *twitchClient) EstablishConnection() error {
+func (t *TwitchClient) EstablishConnection() error {
 
 	url := "wss://eventsub.wss.twitch.tv/ws"
 
@@ -112,12 +100,12 @@ func (t *twitchClient) EstablishConnection() error {
 }
 
 // Disconnects from a channelId
-func (t *twitchClient) Disconnect() {
+func (t *TwitchClient) Disconnect() {
 
 }
 
 // Sends msg to channelID
-func (t *twitchClient) SendChat(msg string, channelID string) error {
+func (t *TwitchClient) SendChat(msg string, channelID string) error {
 
 	payload := struct {
 		BroadcasterID string `json:"broadcaster_id"`
@@ -145,14 +133,14 @@ func (t *twitchClient) SendChat(msg string, channelID string) error {
 
 	body, _ := io.ReadAll(resp.Body)
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("sendchat failed: %w: %w", body, err)
+		return fmt.Errorf("sendchat failed: %s: %w", body, err)
 	}
 
 	return nil
 }
 
 // Looping function to read chat messages in and parse them
-func (t *twitchClient) Read() {
+func (t *TwitchClient) Read() {
 
 	fmt.Println("TwitchBot is reading")
 	for {
@@ -215,7 +203,7 @@ func (t *twitchClient) Read() {
 }
 
 // Subscribes to a chat event
-func (t *twitchClient) Subscribe(channelID string) error {
+func (t *TwitchClient) Subscribe(channelID string) error {
 
 	body := map[string]any{
 		"type":    "channel.chat.message",
@@ -255,12 +243,12 @@ func (t *twitchClient) Subscribe(channelID string) error {
 }
 
 // Closes all connections
-func (t *twitchClient) Close() {
+func (t *TwitchClient) Close() {
 
 }
 
 // Loads all channels into config
-func (t *twitchClient) LoadChannels() error {
+func (t *TwitchClient) LoadChannels() error {
 
 	//Get Users from DB
 	userData, err := auth.LoadUserData()
@@ -281,7 +269,7 @@ func (t *twitchClient) LoadChannels() error {
 }
 
 // Handles sending out commands
-func (t *twitchClient) Command(msg string) error {
+func (t *TwitchClient) Command(msg string) error {
 
 	return nil
 }
@@ -299,7 +287,7 @@ func Pack(msg *EventSubMessage, command string, body string) event.Envelope {
 	newEnvelope.ChannelID = msg.Payload.Event.BroadcasterUserID
 	newEnvelope.Command = command
 	newEnvelope.Content = body
-	newEnvelope.Timestamp = timestamp
+	newEnvelope.Timestamp = rawTime
 
 	fmt.Printf("[%s] %s: @%s %s\n", timestamp, newEnvelope.ChannelName, newEnvelope.Username, body)
 
@@ -317,7 +305,7 @@ func parseCommand(msg string) (string, string) {
 
 }
 
-func (t *twitchClient) RefreshTokens() error {
+func (t *TwitchClient) RefreshTokens() error {
 
 	//Get new App Access Token and store it to config
 	err := auth.RefreshAppAccessToken(t.Config, t.HTTP)
@@ -340,11 +328,11 @@ func (t *twitchClient) RefreshTokens() error {
 	return nil
 }
 
-func (t *twitchClient) Envelopes() <-chan event.Envelope {
+func (t *TwitchClient) Envelopes() <-chan event.Envelope {
 	return t.msgs
 }
 
-func (t *twitchClient) Chew(msg event.Response) {
+func (t *TwitchClient) Chew(msg event.Response) {
 
 	fmt.Println("Twitch has received the response")
 

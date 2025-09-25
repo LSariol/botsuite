@@ -15,7 +15,7 @@ type Deps struct {
 	DB     string
 }
 
-func NewDeps() (*Deps, error) {
+func NewDependencies() (*Deps, error) {
 
 	var dependencies Deps
 
