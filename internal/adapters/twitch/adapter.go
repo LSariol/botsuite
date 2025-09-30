@@ -10,32 +10,56 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/lsariol/botsuite/internal/adapters/adapter"
 	"github.com/lsariol/botsuite/internal/adapters/twitch/auth"
-	"github.com/lsariol/botsuite/internal/app/event"
-	"github.com/lsariol/botsuite/internal/bot"
 	"github.com/lsariol/botsuite/internal/config"
 )
 
+//var _ adapter.Adapter = (*TwitchClient)(nil)
+
 type TwitchClient struct {
-	bot.Bot
 	HTTP        *http.Client
 	WS          *websocket.Conn
 	Config      *config.TwitchConfig
 	SessionData SessionData
-	msgs        chan event.Envelope
+	msgs        chan adapter.Envelope
 }
 
 func NewTwitchBot(client *http.Client, cfg *config.TwitchConfig) *TwitchClient {
 	return &TwitchClient{
 		HTTP:   client,
 		Config: cfg,
-		msgs:   make(chan event.Envelope, 100),
+		msgs:   make(chan adapter.Envelope, 100),
 	}
 }
 
-func (t *TwitchClient) Run() {
+// func (c *TwitchClient) Start(ctx context.Context) error {
 
-}
+// 	if err := c.LoadChannels(); err != nil {
+// 		return fmt.Errorf("Init: %w", err)
+// 	}
+
+// 	if err := c.EstablishConnection(); err != nil {
+// 		return fmt.Errorf("Init: %w", err)
+// 	}
+
+// 	//for channel in channels
+// 	for _, channel := range c.SessionData.Channels {
+// 		if err := c.Subscribe(channel.ID); err != nil {
+// 			fmt.Println(err)
+// 			continue
+// 		}
+// 		fmt.Printf("Connected to %s\n", channel.Username)
+// 	}
+// }
+// func (c *TwitchClient) Stop(ctx context.Context) error                        { /* ... */ }
+// func (c *TwitchClient) Restart(ctx context.Context) error                     { /* ... */ }
+// func (c *TwitchClient) Events() <-chan adapter.Envelope                       { return c.events }
+// func (c *TwitchClient) Deliver(ctx context.Context, r adapter.Response) error { /* ... */ }
+// func (c *TwitchClient) Join(ctx context.Context, target string) error         { /* ... */ }
+// func (c *TwitchClient) Leave(ctx context.Context, target string) error        { /* ... */ }
+// func (c *TwitchClient) Health(ctx context.Context) error                      { return nil }
+// func (c *TwitchClient) Name() string                                          { return "twitch" }
 
 // Initilizes TwitchClient object with values and establishes connections and subscriptions
 func (t *TwitchClient) Init() error {
@@ -199,7 +223,7 @@ func (t *TwitchClient) Read() {
 
 				if message.Payload.Event.Message.Text[0] == '!' {
 					cmd, body := parseCommand(message.Payload.Event.Message.Text)
-					var envelope event.Envelope = Pack(&message, cmd, body)
+					var envelope adapter.Envelope = Pack(&message, cmd, body)
 
 					t.msgs <- envelope
 				}
@@ -283,8 +307,8 @@ func (t *TwitchClient) LoadChannels() error {
 	return nil
 }
 
-func Pack(msg *EventSubMessage, command string, body string) event.Envelope {
-	var newEnvelope event.Envelope
+func Pack(msg *EventSubMessage, command string, body string) adapter.Envelope {
+	var newEnvelope adapter.Envelope
 
 	rawTime, _ := time.Parse(time.RFC3339Nano, msg.Metadata.MessageTimestamp)
 	var timestamp string = (rawTime).Format("2006-01-02 15:04:05.00")
@@ -337,11 +361,11 @@ func (t *TwitchClient) RefreshTokens() error {
 	return nil
 }
 
-func (t *TwitchClient) Envelopes() <-chan event.Envelope {
+func (t *TwitchClient) Envelopes() <-chan adapter.Envelope {
 	return t.msgs
 }
 
-func (t *TwitchClient) Chew(msg event.Response) {
+func (t *TwitchClient) Chew(msg adapter.Response) {
 
 	fmt.Println("Twitch has received the response")
 

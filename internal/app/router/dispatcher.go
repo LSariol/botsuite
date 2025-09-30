@@ -4,13 +4,13 @@ import (
 	"context"
 	"time"
 
+	"github.com/lsariol/botsuite/internal/adapters/adapter"
 	"github.com/lsariol/botsuite/internal/app"
-	"github.com/lsariol/botsuite/internal/app/event"
 	"github.com/lsariol/botsuite/internal/app/middleware"
 	"github.com/lsariol/botsuite/internal/commands"
 )
 
-func Dispatch(parentCtx context.Context, envelope event.Envelope, cmd commands.Command, deps *app.Deps) event.Response {
+func Dispatch(parentCtx context.Context, envelope adapter.Envelope, cmd commands.Command, deps *app.Deps) adapter.Response {
 
 	ctx := parentCtx
 

@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/lsariol/botsuite/internal/adapters/adapter"
 	"github.com/lsariol/botsuite/internal/app"
-	"github.com/lsariol/botsuite/internal/app/event"
 )
 
 type Command interface {
@@ -14,5 +14,5 @@ type Command interface {
 	Description() string
 	Usage() string
 	Timeout() time.Duration
-	Execute(ctx context.Context, e event.Envelope, deps *app.Deps) (event.Response, error)
+	Execute(ctx context.Context, e adapter.Envelope, deps *app.Deps) (adapter.Response, error)
 }

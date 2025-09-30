@@ -3,33 +3,33 @@ package router
 import (
 	"context"
 
+	"github.com/lsariol/botsuite/internal/adapters/adapter"
 	"github.com/lsariol/botsuite/internal/app"
-	"github.com/lsariol/botsuite/internal/app/event"
 	"github.com/lsariol/botsuite/internal/app/registry"
 	"github.com/lsariol/botsuite/internal/commands"
 )
 
 type Router struct {
-	inbound  chan event.Envelope
-	outbound chan event.Response
+	inbound  chan adapter.Envelope
+	outbound chan adapter.Response
 	registry *registry.Registry
 	rootCtx  context.Context
 }
 
 func NewRouter(ctx context.Context, reg *registry.Registry) *Router {
 	return &Router{
-		inbound:  make(chan event.Envelope, 100),
-		outbound: make(chan event.Response, 100),
+		inbound:  make(chan adapter.Envelope, 100),
+		outbound: make(chan adapter.Response, 100),
 		rootCtx:  ctx,
 		registry: reg,
 	}
 }
 
-func (r *Router) Inbound() chan<- event.Envelope {
+func (r *Router) Inbound() chan<- adapter.Envelope {
 	return r.inbound
 }
 
-func (r *Router) Outbound() <-chan event.Response {
+func (r *Router) Outbound() <-chan adapter.Response {
 	return r.outbound
 }
 
@@ -51,14 +51,14 @@ func (r *Router) Run(ctx context.Context, deps *app.Deps) {
 				continue
 			}
 
-			var resp event.Response = Dispatch(ctx, env, cmd, deps)
+			var resp adapter.Response = Dispatch(ctx, env, cmd, deps)
 			r.outbound <- resp
 
 		}
 	}
 }
 
-func (r *Router) registryLookUp(envelope event.Envelope) (commands.Command, bool) {
+func (r *Router) registryLookUp(envelope adapter.Envelope) (commands.Command, bool) {
 
 	cmd, ok := r.registry.Get(envelope.Command)
 

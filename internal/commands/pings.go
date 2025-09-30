@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/lsariol/botsuite/internal/adapters/adapter"
 	"github.com/lsariol/botsuite/internal/app"
-	"github.com/lsariol/botsuite/internal/app/event"
 )
 
 type Ping struct{}
@@ -17,11 +17,11 @@ func (Ping) Description() string    { return "Latency check." }
 func (Ping) Usage() string          { return "!ping" }
 func (Ping) Timeout() time.Duration { return 3 * time.Second }
 
-func (Ping) Execute(ctx context.Context, e event.Envelope, deps *app.Deps) (event.Response, error) {
+func (Ping) Execute(ctx context.Context, e adapter.Envelope, deps *app.Deps) (adapter.Response, error) {
 
 	diff := time.Since(e.Timestamp)
 	fmt.Println(e.Timestamp)
 	fmt.Println(time.Now())
-	return event.Response{Text: fmt.Sprintf("pong! (Not currently accurate. Twitch doesnt return real timestamps on their event messages. %d ms)", diff.Milliseconds())}, nil
+	return adapter.Response{Text: fmt.Sprintf("pong! (Not currently accurate. Twitch doesnt return real timestamps on their event messages. %d ms)", diff.Milliseconds())}, nil
 
 }

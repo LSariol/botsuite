@@ -1,4 +1,4 @@
-package event
+package adapter
 
 import "time"
 

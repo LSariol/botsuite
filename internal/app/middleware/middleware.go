@@ -3,9 +3,9 @@ package middleware
 import (
 	"context"
 
+	"github.com/lsariol/botsuite/internal/adapters/adapter"
 	"github.com/lsariol/botsuite/internal/app"
-	"github.com/lsariol/botsuite/internal/app/event"
 )
 
-type Handler func(ctx context.Context, env event.Envelope, deps *app.Deps) (event.Response, error)
+type Handler func(ctx context.Context, env adapter.Envelope, deps *app.Deps) (adapter.Response, error)
 type Middleware func(Handler) Handler
