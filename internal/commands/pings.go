@@ -20,8 +20,6 @@ func (Ping) Timeout() time.Duration { return 3 * time.Second }
 func (Ping) Execute(ctx context.Context, e adapter.Envelope, deps *app.Deps) (adapter.Response, error) {
 
 	diff := time.Since(e.Timestamp)
-	fmt.Println(e.Timestamp)
-	fmt.Println(time.Now())
 	return adapter.Response{Text: fmt.Sprintf("pong! (Not currently accurate. Twitch doesnt return real timestamps on their event messages. %d ms)", diff.Milliseconds())}, nil
 
 }

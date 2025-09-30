@@ -32,10 +32,7 @@ func main() {
 	router := router.NewRouter(ctx, register)
 
 	// Create TwitchClient
-	var twitchBot twitch.TwitchClient = *twitch.NewTwitchBot(deps.HTTP, &deps.Config.Twitch)
-	if err := twitchBot.Init(); err != nil {
-		log.Fatal(err)
-	}
+	var twitchClient twitch.TwitchClient = *twitch.NewTwitchBot(deps.HTTP, &deps.Config.Twitch)
 
 	// Start Threads
 
@@ -43,10 +40,10 @@ func main() {
 	go router.Run(ctx, deps)
 
 	// Start TwitchBot Reading
-	go twitchBot.Read()
+	go twitchClient.Run(ctx)
 
 	go func() {
-		for env := range twitchBot.Envelopes() {
+		for env := range twitchClient.Events() {
 			router.Inbound() <- env
 		}
 	}()
@@ -56,7 +53,7 @@ func main() {
 
 			switch resp.Platform {
 			case "twitch":
-				twitchBot.Chew(resp)
+				twitchClient.Deliver(ctx, resp)
 			case "discord":
 				//discord Chew
 				continue
