@@ -22,6 +22,6 @@ func (Ping) Execute(ctx context.Context, e event.Envelope, deps *app.Deps) (even
 	diff := time.Since(e.Timestamp)
 	fmt.Println(e.Timestamp)
 	fmt.Println(time.Now())
-	return event.Response{Text: fmt.Sprintf("pong! (%d ms)", diff.Milliseconds())}, nil
+	return event.Response{Text: fmt.Sprintf("pong! (Not currently accurate. Twitch doesnt return real timestamps on their event messages. %d ms)", diff.Milliseconds())}, nil
 
 }

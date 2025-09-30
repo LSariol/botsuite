@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io"
 	"log"
 	"net/http"
 	"strings"
@@ -100,8 +99,9 @@ func (t *TwitchClient) EstablishConnection() error {
 }
 
 // Disconnects from a channelId
-func (t *TwitchClient) Disconnect() {
+func (t *TwitchClient) Disconnect() error {
 
+	return nil
 }
 
 // Sends msg to channelID
@@ -131,9 +131,17 @@ func (t *TwitchClient) SendChat(msg string, channelID string) error {
 	resp, _ := t.HTTP.Do(req)
 	defer resp.Body.Close()
 
-	body, _ := io.ReadAll(resp.Body)
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("sendchat failed: %s: %w", body, err)
+
+		var failedMessage map[string]any
+		json.NewDecoder(resp.Body).Decode(&failedMessage)
+
+		if failedMessage["error"] == "Unauthorized" {
+			return fmt.Errorf("unauthorized: Missing channel:bot")
+		} else {
+			return fmt.Errorf("sendchat: %s", failedMessage["error"])
+		}
+
 	}
 
 	return nil
@@ -165,15 +173,22 @@ func (t *TwitchClient) Read() {
 			//connect to new url
 			continue
 		case "revocation":
+			fmt.Println("Revocation")
 			//youll receive the message once and then no longer receive messages for the specified user and subscription type
 			// check status field on how to handle
 			switch message.Payload.Subscription.Status {
 			case "user_removed":
 				// user_removed -> user mentioned in the subscription no longer exists. ( Channel banned or whatver)
+				fmt.Println("User Removed")
+				continue
 			case "authorization_revoked":
 				// authorization_revoked -> user revoked the authorization token that the subscription relied on (user removed bot permissions), remove user from subscription list
+				fmt.Println("Auth Revoked")
+				continue
 			case "version_removed":
 				// version_removed -> the subscribed to subscription type and version is no longer supported
+				fmt.Println("Version removed")
+				continue
 			}
 			continue
 		case "notification":
@@ -194,6 +209,7 @@ func (t *TwitchClient) Read() {
 				fmt.Printf("Unknown notification type '%s'\n", message.Payload.Subscription.Type)
 				//log error to db
 			}
+
 		default:
 
 		}
@@ -267,12 +283,6 @@ func (t *TwitchClient) LoadChannels() error {
 	return nil
 }
 
-// Handles sending out commands
-func (t *TwitchClient) Command(msg string) error {
-
-	return nil
-}
-
 func Pack(msg *EventSubMessage, command string, body string) event.Envelope {
 	var newEnvelope event.Envelope
 
@@ -335,5 +345,18 @@ func (t *TwitchClient) Chew(msg event.Response) {
 
 	fmt.Println("Twitch has received the response")
 
-	t.SendChat(msg.Text, msg.ChannelID)
+	err := t.SendChat(msg.Text, msg.ChannelID)
+	if err != nil {
+		if err == fmt.Errorf("unauthorized: Missing channel:bot") {
+			t.removeUser(msg.ChannelID)
+		}
+	}
+}
+
+func (t *TwitchClient) addUser() {
+
+}
+
+func (t *TwitchClient) removeUser(channelId string) {
+
 }
