@@ -22,19 +22,19 @@ func (CatFact) Description() string {
 func (CatFact) Usage() string          { return "!catfact" }
 func (CatFact) Timeout() time.Duration { return 20 * time.Second }
 
+// Returns a single catfact with max length set to 150
 func (CatFact) Execute(ctx context.Context, e adapter.Envelope, deps *app.Deps) (adapter.Response, error) {
+
 	type catfact struct {
 		Fact   string `json:"fact"`
 		Length int    `json:"length"`
 	}
 
-	resp, err := deps.HTTP.Get("https://catfact.ninja/fact?max_length=100")
+	resp, err := deps.HTTP.Get("https://catfact.ninja/fact?max_length=150")
 	if err != nil {
 		return adapter.Response{Error: true}, nil
 	}
 	defer resp.Body.Close()
-
-	fmt.Println("inside Catfacts")
 
 	if resp.StatusCode != http.StatusOK {
 		bodyBytes, _ := io.ReadAll(resp.Body)
