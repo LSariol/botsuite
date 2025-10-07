@@ -1,6 +1,6 @@
 module github.com/lsariol/botsuite
 
-go 1.21.0
+go 1.25.1
 
 require github.com/gorilla/websocket v1.5.3
 
