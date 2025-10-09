@@ -7,7 +7,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/lsariol/botsuite/internal/adapters/twitch"
+	twitchbot "github.com/lsariol/botsuite/internal/adapters/twitch/bot"
 	"github.com/lsariol/botsuite/internal/app"
 	"github.com/lsariol/botsuite/internal/app/registry"
 	"github.com/lsariol/botsuite/internal/app/router"
@@ -32,7 +32,7 @@ func main() {
 	router := router.NewRouter(ctx, register)
 
 	// Create TwitchClient
-	var twitchClient twitch.TwitchClient = *twitch.NewTwitchBot(deps.HTTP, &deps.Config.Twitch)
+	var twitchClient twitchbot.TwitchClient = *twitchbot.NewTwitchBot(deps.HTTP, &deps.Config.Twitch)
 
 	// Start Threads
 

@@ -46,9 +46,11 @@ func (c *TwitchClient) Run(ctx context.Context) error {
 		return fmt.Errorf("run: %w", err)
 	}
 
-	if err := c.startWS(); err != nil {
+	conn, err := c.newWebsocketConn("wss://eventsub.wss.twitch.tv/ws")
+	if err != nil {
 		return fmt.Errorf("run: %w", err)
 	}
+	c.WS = conn
 
 	//for channel in channels
 	for _, channel := range c.SessionData.Channels {
@@ -189,23 +191,24 @@ func (c *TwitchClient) Name() string {
 
 // ___________ Private Helper Functions ____________
 
-func (t *TwitchClient) refreshTokens() error {
+// Refreshes the bots User Access Token and Refresh Token
+func (c *TwitchClient) refreshTokens() error {
 
 	//Get new App Access Token and store it to config
-	err := auth.RefreshAppAccessToken(t.Config, t.HTTP)
+	err := auth.RefreshAppAccessToken(c.Config, c.HTTP)
 	if err != nil {
 		return fmt.Errorf("RefreshTokens: %w", err)
 	}
 
-	newTokens, err := auth.RefreshUserAccessToken(t.Config.UserRefreshToken, t.Config, t.HTTP)
+	newTokens, err := auth.RefreshUserAccessToken(c.Config.UserRefreshToken, c.Config, c.HTTP)
 	if err != nil {
 		return fmt.Errorf("RefreshTokens: %w", err)
 	}
 
-	t.Config.UserAccessToken = newTokens.UserAccessToken
-	t.Config.UserRefreshToken = newTokens.UserRefreshToken
+	c.Config.UserAccessToken = newTokens.UserAccessToken
+	c.Config.UserRefreshToken = newTokens.UserRefreshToken
 
-	if err := config.StoreTwitchConfig(t.Config); err != nil {
+	if err := config.StoreTwitchConfig(c.Config); err != nil {
 		return fmt.Errorf("RefreshToken: %w", err)
 	}
 
@@ -213,7 +216,7 @@ func (t *TwitchClient) refreshTokens() error {
 }
 
 // Loads all channels into config
-func (t *TwitchClient) loadChannels() error {
+func (c *TwitchClient) loadChannels() error {
 
 	//Get Users from DB
 	userData, err := auth.LoadUserData()
@@ -229,39 +232,7 @@ func (t *TwitchClient) loadChannels() error {
 		channels[channel.ID] = &channel
 	}
 
-	t.SessionData.Channels = channels
-	return nil
-}
-
-func (t *TwitchClient) startWS() error {
-
-	url := "wss://eventsub.wss.twitch.tv/ws"
-
-	// 	//Connect
-	// 	//websocket <- calling package
-	// 	//DefaultDialer <- a dialer with all fields set to default values
-	// 	//Dial <- creates a new client connection
-	// 	//returns: *websocket.conn, *http.response, err
-	conn, _, err := websocket.DefaultDialer.Dial(url, nil)
-	if err != nil {
-		return fmt.Errorf("dial error: %w", err)
-	}
-
-	t.WS = conn
-
-	_, message, err := t.WS.ReadMessage()
-	if err != nil {
-		return fmt.Errorf("read error: %w", err)
-	}
-
-	var event EventSubMessage
-	if err := json.Unmarshal(message, &event); err != nil {
-		return fmt.Errorf("json unmarshal error: %w", err)
-	}
-
-	t.SessionData.SessionID = event.Payload.Session.ID
-	t.SessionData.KeepAliveTimeout = event.Payload.Session.KeepaliveTimeoutSeconds
-
+	c.SessionData.Channels = channels
 	return nil
 }
 
@@ -279,58 +250,80 @@ func (c *TwitchClient) listen() {
 		var message EventSubMessage
 		if err := json.Unmarshal(msg, &message); err != nil {
 			log.Println("convert error: ", err)
+			continue
 		}
 
-		switch message.Metadata.MessageType {
-		case "session_welcome":
-			continue
-		case "session_keepalive":
-			//Add a timer to see if the socket is alive and healthy
-			continue
-		case "session_reconnect":
-			//connect to new url
-			continue
-		case "revocation":
-			fmt.Println("Revocation")
-			//youll receive the message once and then no longer receive messages for the specified user and subscription type
-			// check status field on how to handle
-			switch message.Payload.Subscription.Status {
-			case "user_removed":
-				// user_removed -> user mentioned in the subscription no longer exists. ( Channel banned or whatver)
-				fmt.Println("User Removed")
-				continue
-			case "authorization_revoked":
-				// authorization_revoked -> user revoked the authorization token that the subscription relied on (user removed bot permissions), remove user from subscription list
-				fmt.Println("Auth Revoked")
-				continue
-			case "version_removed":
-				// version_removed -> the subscribed to subscription type and version is no longer supported
-				fmt.Println("Version removed")
-				continue
+		c.handleEvent(message)
+
+	}
+}
+
+func (c *TwitchClient) handleEvent(event EventSubMessage) {
+
+	switch event.Metadata.MessageType {
+	case "session_welcome":
+		return
+
+	case "session_keepalive":
+		//Add a timer to see if the socket is alive and healthy
+		return
+
+	case "session_reconnect":
+
+		fmt.Println("Attempting to reconnect")
+		err := c.ReconnectWebsocket(event)
+
+		if err != nil {
+			fmt.Println("error in handleEvent session_reconnect %w", err)
+			panic(err)
+		}
+		return
+
+	case "revocation":
+
+		fmt.Println("Revocation")
+		//youll receive the message once and then no longer receive messages for the specified user and subscription type
+		// check status field on how to handle
+
+		switch event.Payload.Subscription.Status {
+
+		case "user_removed":
+			// user_removed -> user mentioned in the subscription no longer exists. ( Channel banned or whatver)
+			fmt.Println("User Removed")
+			return
+
+		case "authorization_revoked":
+			// authorization_revoked -> user revoked the authorization token that the subscription relied on (user removed bot permissions), remove user from subscription list
+			fmt.Println("Auth Revoked")
+			return
+
+		case "version_removed":
+			// version_removed -> the subscribed to subscription type and version is no longer supported
+			fmt.Println("Version removed")
+			return
+		}
+		return
+
+	case "notification":
+		//check if message is a command
+
+		switch event.Payload.Subscription.Type {
+		case "channel.chat.message":
+
+			if event.Payload.Event.Message.Text[0] == '!' {
+				cmd, body := parseCommand(event.Payload.Event.Message.Text)
+				var envelope adapter.Envelope = pack(&event, cmd, body)
+
+				c.events <- envelope
 			}
-			continue
-		case "notification":
-			//check if message is a command
-
-			switch message.Payload.Subscription.Type {
-			case "channel.chat.message":
-
-				if message.Payload.Event.Message.Text[0] == '!' {
-					cmd, body := parseCommand(message.Payload.Event.Message.Text)
-					var envelope adapter.Envelope = pack(&message, cmd, body)
-
-					c.events <- envelope
-				}
-				fmt.Printf("%s @%s: %s\n", message.Payload.Event.BroadcasterUserName, message.Payload.Event.ChatterUserName, message.Payload.Event.Message.Text)
-
-			default:
-				fmt.Printf("Unknown notification type '%s'\n", message.Payload.Subscription.Type)
-				//log error to db
-			}
+			fmt.Printf("%s @%s: %s\n", event.Payload.Event.BroadcasterUserName, event.Payload.Event.ChatterUserName, event.Payload.Event.Message.Text)
 
 		default:
-
+			fmt.Printf("Unknown notification type '%s'\n", event.Payload.Subscription.Type)
+			//log error to db
 		}
+
+	default:
 
 	}
 }
