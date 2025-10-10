@@ -15,7 +15,7 @@ import (
 type RandomDog struct{}
 
 func (RandomDog) Name() string      { return "!randomdog" }
-func (RandomDog) Aliases() []string { return []string{"!RandomDog", "!randomDog", "!Randomdog"} }
+func (RandomDog) Aliases() []string { return nil }
 func (RandomDog) Description() string {
 	return "Gives you a random dog picture,gif or video from random.dog/woof.json"
 }

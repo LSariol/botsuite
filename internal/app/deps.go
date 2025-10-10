@@ -9,10 +9,11 @@ import (
 )
 
 type Deps struct {
-	Config config.Config
-	HTTP   *http.Client
-	Logger string
-	DB     string
+	Config   config.Config
+	HTTP     *http.Client
+	Logger   string
+	DB       string
+	BootTime time.Time
 }
 
 func NewDependencies() (*Deps, error) {
@@ -39,6 +40,7 @@ func NewDependencies() (*Deps, error) {
 	dependencies.Config = cfg
 	dependencies.Logger = "*zap.Logger"
 	dependencies.DB = "*db.Store"
+	dependencies.BootTime = time.Now()
 
 	return &dependencies, nil
 }

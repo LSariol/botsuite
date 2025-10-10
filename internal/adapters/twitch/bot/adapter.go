@@ -418,7 +418,7 @@ func pack(msg *EventSubMessage, command string, body string) adapter.Envelope {
 	newEnvelope.UserID = msg.Payload.Event.ChatterUserID
 	newEnvelope.ChannelName = msg.Payload.Event.BroadcasterUserName
 	newEnvelope.ChannelID = msg.Payload.Event.BroadcasterUserID
-	newEnvelope.Command = command
+	newEnvelope.Command = strings.ToLower(command)
 	newEnvelope.Content = body
 	newEnvelope.Timestamp = rawTime
 
