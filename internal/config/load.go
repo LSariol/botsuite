@@ -17,12 +17,12 @@ func Load() (Config, error) {
 		return cfg, fmt.Errorf("error loading .env file: %w", err)
 	}
 
-	twitch.AppClientID = os.Getenv("APP_CLIENT_ID")
-	twitch.AppClientSecret = os.Getenv("APP_CLIENT_SECRET")
-	twitch.AppAccessToken = os.Getenv("APP_ACCESS_TOKEN")
-	twitch.UserAccessToken = os.Getenv("BOT_USER_ACCESS_TOKEN")
-	twitch.UserRefreshToken = os.Getenv("BOT_USER_REFRESH_TOKEN")
-	twitch.BotID = os.Getenv("BOT_ID")
+	twitch.AppClientID = os.Getenv("TWITCH_APP_CLIENT_ID")
+	twitch.AppClientSecret = os.Getenv("TWITCH_APP_CLIENT_SECRET")
+	twitch.AppAccessToken = os.Getenv("TWITCH_APP_ACCESS_TOKEN")
+	twitch.UserAccessToken = os.Getenv("TWITCH_BOT_USER_ACCESS_TOKEN")
+	twitch.UserRefreshToken = os.Getenv("TWITCH_BOT_USER_REFRESH_TOKEN")
+	twitch.BotID = os.Getenv("TWITCH_BOT_ID")
 
 	cfg.Twitch = twitch
 

@@ -20,12 +20,12 @@ func (cfg TwitchConfig) ToDict() map[string]string {
 
 	d := make(map[string]string)
 
-	d["APP_CLIENT_ID"] = cfg.AppClientID
-	d["APP_CLIENT_SECRET"] = cfg.AppClientSecret
-	d["APP_ACCESS_TOKEN"] = cfg.AppAccessToken
-	d["BOT_USER_ACCESS_TOKEN"] = cfg.UserAccessToken
-	d["BOT_USER_REFRESH_TOKEN"] = cfg.UserRefreshToken
-	d["BOT_ID"] = cfg.BotID
+	d["TWITCH_APP_CLIENT_ID"] = cfg.AppClientID
+	d["TWITCH_APP_CLIENT_SECRET"] = cfg.AppClientSecret
+	d["TWITCH_APP_ACCESS_TOKEN"] = cfg.AppAccessToken
+	d["TWITCH_BOT_USER_ACCESS_TOKEN"] = cfg.UserAccessToken
+	d["TWITCH_BOT_USER_REFRESH_TOKEN"] = cfg.UserRefreshToken
+	d["TWITCH_BOT_ID"] = cfg.BotID
 
 	return d
 }
