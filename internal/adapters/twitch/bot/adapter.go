@@ -9,6 +9,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -46,11 +47,13 @@ func (c *TwitchClient) Run(ctx context.Context) error {
 		return fmt.Errorf("run: %w", err)
 	}
 
-	conn, err := c.newWebsocketConn("wss://eventsub.wss.twitch.tv/ws")
+	conn, sessionData, err := c.newWebsocketConn(os.Getenv("TWITCH_WEBSOCKET_URL"))
 	if err != nil {
 		return fmt.Errorf("run: %w", err)
 	}
 	c.WS = conn
+	c.SessionData.SessionID = sessionData.SessionID
+	c.SessionData.KeepAliveTimeout = sessionData.KeepAliveTimeout
 
 	//for channel in channels
 	for _, channel := range c.SessionData.Channels {
@@ -74,7 +77,9 @@ func (c *TwitchClient) Restart(ctx context.Context) error {
 	return nil
 }
 
+// Gracefully closes the websocket connection
 func (c *TwitchClient) Close(ctx context.Context) error {
+
 	return nil
 }
 
@@ -117,7 +122,7 @@ func (c *TwitchClient) Join(ctx context.Context, targetID string) error {
 	}
 
 	buf, _ := json.Marshal(body)
-	req, err := http.NewRequest("POST", "https://api.twitch.tv/helix/eventsub/subscriptions", bytes.NewReader(buf))
+	req, err := http.NewRequest("POST", os.Getenv("TWITCH_SUB_URL"), bytes.NewReader(buf))
 	if err != nil {
 		return fmt.Errorf("join: %w", err)
 	}
@@ -147,7 +152,7 @@ func (c *TwitchClient) Join(ctx context.Context, targetID string) error {
 func (c *TwitchClient) Leave(ctx context.Context, target string) error {
 
 	subscriptionID := c.SessionData.Channels[target].SubscriptionID
-	req, err := http.NewRequestWithContext(ctx, http.MethodDelete, "https://api.twitch.tv/helix/eventsub/subscriptions?id="+subscriptionID, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodDelete, os.Getenv("TWITCH_SUB_URL")+"?id="+subscriptionID, nil)
 	if err != nil {
 		return fmt.Errorf("unsubscribe: %w", err)
 	}
@@ -239,21 +244,37 @@ func (c *TwitchClient) loadChannels() error {
 // Looping function to read chat messages in and parse them
 func (c *TwitchClient) listen() {
 
-	fmt.Println("TwitchBot is reading")
+	fmt.Println("TwitchBot is listening")
+
 	for {
-		_, msg, err := c.WS.ReadMessage()
+		messageType, data, err := c.WS.ReadMessage()
 		if err != nil {
-			log.Println("read error:", err)
-			break
+			log.Println(err)
 		}
 
-		var message EventSubMessage
-		if err := json.Unmarshal(msg, &message); err != nil {
-			log.Println("convert error: ", err)
+		if messageType == websocket.TextMessage {
+			var event EventSubMessage
+			if err := json.Unmarshal(data, &event); err != nil {
+				fmt.Println(fmt.Errorf("json unmarshal: %w", err))
+				fmt.Println(string(data))
+			}
+
+			c.handleEvent(event)
 			continue
 		}
 
-		c.handleEvent(message)
+		// If Socket closes randomly, or we read in an error
+		if messageType == websocket.CloseMessage || messageType == -1 {
+			conn, sessiondata, err := c.newWebsocketConn(os.Getenv("TWITCH_SUB_URL"))
+			if err != nil {
+				fmt.Println("establish new connection failure: %w", err)
+			}
+
+			c.WS = conn
+			c.SessionData.SessionID = sessiondata.SessionID
+			c.SessionData.KeepAliveTimeout = sessiondata.KeepAliveTimeout
+			continue
+		}
 
 	}
 }

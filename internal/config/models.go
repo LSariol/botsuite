@@ -11,6 +11,9 @@ type TwitchConfig struct {
 	UserAccessToken  string
 	UserRefreshToken string
 	BotID            string
+	WebSocketURL     string
+	APIURL           string
+	SubURL           string
 }
 
 func (cfg TwitchConfig) ToDict() map[string]string {
@@ -23,6 +26,9 @@ func (cfg TwitchConfig) ToDict() map[string]string {
 	d["BOT_USER_ACCESS_TOKEN"] = cfg.UserAccessToken
 	d["BOT_USER_REFRESH_TOKEN"] = cfg.UserRefreshToken
 	d["BOT_ID"] = cfg.BotID
+	d["TWITCH_WEBSOCKET_URL"] = cfg.WebSocketURL
+	d["TWITCH_API_URL"] = cfg.APIURL
+	d["TWITCH_SUB_URL"] = cfg.SubURL
 
 	return d
 }

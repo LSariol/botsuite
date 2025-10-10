@@ -23,6 +23,9 @@ func Load() (Config, error) {
 	twitch.UserAccessToken = os.Getenv("BOT_USER_ACCESS_TOKEN")
 	twitch.UserRefreshToken = os.Getenv("BOT_USER_REFRESH_TOKEN")
 	twitch.BotID = os.Getenv("BOT_ID")
+	twitch.WebSocketURL = os.Getenv("TWITCH_WEBSOCKET_URL")
+	twitch.APIURL = os.Getenv("TWITCH_API_URL")
+	twitch.SubURL = os.Getenv("TWITCH_SUB_URL")
 
 	cfg.Twitch = twitch
 
