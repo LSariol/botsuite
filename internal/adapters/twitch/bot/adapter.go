@@ -9,7 +9,6 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"os"
 	"strings"
 	"time"
 
@@ -17,6 +16,12 @@ import (
 	"github.com/lsariol/botsuite/internal/adapters/adapter"
 	"github.com/lsariol/botsuite/internal/adapters/twitch/auth"
 	"github.com/lsariol/botsuite/internal/config"
+)
+
+const (
+	HelixBaseURL       = "https://api.twitch.tv/helix"
+	EventSubAPIBaseURL = "https://api.twitch.tv/helix/eventsub/subscriptions"
+	EventSubWSURL      = "wss://eventsub.wss.twitch.tv/ws"
 )
 
 var _ adapter.Adapter = (*TwitchClient)(nil)
@@ -47,7 +52,7 @@ func (c *TwitchClient) Run(ctx context.Context) error {
 		return fmt.Errorf("run: %w", err)
 	}
 
-	conn, sessionData, err := c.newWebsocketConn(os.Getenv("TWITCH_WEBSOCKET_URL"))
+	conn, sessionData, err := c.newWebsocketConn(EventSubWSURL)
 	if err != nil {
 		return fmt.Errorf("run: %w", err)
 	}
@@ -122,7 +127,7 @@ func (c *TwitchClient) Join(ctx context.Context, targetID string) error {
 	}
 
 	buf, _ := json.Marshal(body)
-	req, err := http.NewRequest("POST", os.Getenv("TWITCH_SUB_URL"), bytes.NewReader(buf))
+	req, err := http.NewRequest("POST", EventSubAPIBaseURL, bytes.NewReader(buf))
 	if err != nil {
 		return fmt.Errorf("join: %w", err)
 	}
@@ -152,7 +157,7 @@ func (c *TwitchClient) Join(ctx context.Context, targetID string) error {
 func (c *TwitchClient) Leave(ctx context.Context, target string) error {
 
 	subscriptionID := c.SessionData.Channels[target].SubscriptionID
-	req, err := http.NewRequestWithContext(ctx, http.MethodDelete, os.Getenv("TWITCH_SUB_URL")+"?id="+subscriptionID, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodDelete, EventSubAPIBaseURL+"?id="+subscriptionID, nil)
 	if err != nil {
 		return fmt.Errorf("unsubscribe: %w", err)
 	}
@@ -265,7 +270,7 @@ func (c *TwitchClient) listen() {
 
 		// If Socket closes randomly, or we read in an error
 		if messageType == websocket.CloseMessage || messageType == -1 {
-			conn, sessiondata, err := c.newWebsocketConn(os.Getenv("TWITCH_SUB_URL"))
+			conn, sessiondata, err := c.newWebsocketConn(EventSubAPIBaseURL)
 			if err != nil {
 				fmt.Println("establish new connection failure: %w", err)
 			}
