@@ -1,6 +1,7 @@
 package twitch
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -69,7 +70,7 @@ func (c *TwitchClient) dialWebsocket(URL string) (*websocket.Conn, SessionData, 
 	return newConn, sD, nil
 }
 
-func (c *TwitchClient) hardResetWS(URL string) error {
+func (c *TwitchClient) hardResetWS(ctx context.Context, URL string) error {
 
 	newConn, _, err := websocket.DefaultDialer.Dial(URL, nil)
 	if err != nil {
@@ -97,5 +98,6 @@ func (c *TwitchClient) hardResetWS(URL string) error {
 	c.SessionData.KeepAliveTimeout = event.Payload.Session.KeepaliveTimeoutSeconds
 	c.SessionData.SessionID = event.Payload.Session.ID
 	c.WS = newConn
+	c.JoinAllChannels(ctx)
 	return nil
 }

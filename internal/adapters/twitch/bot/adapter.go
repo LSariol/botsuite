@@ -167,7 +167,7 @@ func (c *TwitchClient) JoinAllChannels(ctx context.Context) map[string]error {
 
 	for _, channel := range c.SessionData.Channels {
 		if err := c.Join(ctx, channel.ID); err != nil {
-			fmt.Errorf("failed to join %s: %w", channel.Username, err)
+			fmt.Printf("failed to join %s: %w", channel.Username, err.Error())
 			failedChannels[channel.ID] = err
 		}
 		fmt.Printf("Connected to %s\n", channel.Username)
@@ -283,7 +283,7 @@ func (c *TwitchClient) listen(ctx context.Context) {
 			if err != nil {
 				if ce, ok := err.(*websocket.CloseError); ok {
 					log.Printf("peer sent close: code=%d text=%q", ce.Code, ce.Text)
-					c.hardResetWS(EventSubWSURL)
+					c.hardResetWS(ctx, EventSubWSURL)
 					continue
 				}
 				log.Printf("read error: %v", err)
@@ -306,7 +306,7 @@ func (c *TwitchClient) listen(ctx context.Context) {
 				log.Println("Read error, should be wsarecv")
 				log.Println("messagetype == websocket.CloseMessage || messageType == -1 ERROR PATH.")
 				log.Printf("%d: %s", messageType, err.Error())
-				c.hardResetWS(EventSubWSURL)
+				c.hardResetWS(ctx, EventSubWSURL)
 				continue
 
 			default:
