@@ -18,6 +18,13 @@ import (
 	"github.com/lsariol/botsuite/internal/config"
 )
 
+// CLI URLS
+// const (
+// 	HelixBaseURL       = "https://api.twitch.tv/helix"
+// 	EventSubAPIBaseURL = "http://127.0.0.1:8080/eventsub/subscriptions"
+// 	EventSubWSURL      = "ws://127.0.0.1:8080/ws"
+// )
+
 const (
 	HelixBaseURL       = "https://api.twitch.tv/helix"
 	EventSubAPIBaseURL = "https://api.twitch.tv/helix/eventsub/subscriptions"
@@ -52,7 +59,7 @@ func (c *TwitchClient) Run(ctx context.Context) error {
 		return fmt.Errorf("run: %w", err)
 	}
 
-	conn, sessionData, err := c.newWebsocketConn(EventSubWSURL)
+	conn, sessionData, err := c.dialWebsocket(EventSubWSURL)
 	if err != nil {
 		return fmt.Errorf("run: %w", err)
 	}
@@ -60,16 +67,16 @@ func (c *TwitchClient) Run(ctx context.Context) error {
 	c.SessionData.SessionID = sessionData.SessionID
 	c.SessionData.KeepAliveTimeout = sessionData.KeepAliveTimeout
 
-	//for channel in channels
-	for _, channel := range c.SessionData.Channels {
-		if err := c.Join(ctx, channel.ID); err != nil {
-			fmt.Println(err)
-			continue
-		}
-		fmt.Printf("Connected to %s\n", channel.Username)
-	}
+	// Start websocket so it doesnt time out when joining channels
+	go c.listen(ctx)
 
-	go c.listen()
+	failedChannels := c.JoinAllChannels(ctx)
+
+	if len(failedChannels) > 0 {
+		for k, v := range failedChannels {
+			fmt.Printf("failed to connect to %s: %w\n", k, v)
+		}
+	}
 
 	return nil
 }
@@ -79,6 +86,7 @@ func (c *TwitchClient) Stop(ctx context.Context) error {
 }
 
 func (c *TwitchClient) Restart(ctx context.Context) error {
+
 	return nil
 }
 
@@ -152,6 +160,19 @@ func (c *TwitchClient) Join(ctx context.Context, targetID string) error {
 	}
 
 	return nil
+}
+
+func (c *TwitchClient) JoinAllChannels(ctx context.Context) map[string]error {
+	failedChannels := make(map[string]error)
+
+	for _, channel := range c.SessionData.Channels {
+		if err := c.Join(ctx, channel.ID); err != nil {
+			fmt.Errorf("failed to join %s: %w", channel.Username, err)
+			failedChannels[channel.ID] = err
+		}
+		fmt.Printf("Connected to %s\n", channel.Username)
+	}
+	return failedChannels
 }
 
 func (c *TwitchClient) Leave(ctx context.Context, target string) error {
@@ -247,40 +268,58 @@ func (c *TwitchClient) loadChannels() error {
 }
 
 // Looping function to read chat messages in and parse them
-func (c *TwitchClient) listen() {
+func (c *TwitchClient) listen(ctx context.Context) {
 
 	fmt.Println("TwitchBot is listening")
 
 	for {
-		messageType, data, err := c.WS.ReadMessage()
-		if err != nil {
-			log.Println(err)
-		}
+		select {
+		case <-ctx.Done():
+			log.Println("context canceled, stopping read loop")
+			return
 
-		if messageType == websocket.TextMessage {
-			var event EventSubMessage
-			if err := json.Unmarshal(data, &event); err != nil {
-				fmt.Println(fmt.Errorf("json unmarshal: %w", err))
-				fmt.Println(string(data))
-			}
-
-			c.handleEvent(event)
-			continue
-		}
-
-		// If Socket closes randomly, or we read in an error
-		if messageType == websocket.CloseMessage || messageType == -1 {
-			conn, sessiondata, err := c.newWebsocketConn(EventSubAPIBaseURL)
+		default:
+			messageType, data, err := c.WS.ReadMessage()
 			if err != nil {
-				fmt.Println("establish new connection failure: %w", err)
+				if ce, ok := err.(*websocket.CloseError); ok {
+					log.Printf("peer sent close: code=%d text=%q", ce.Code, ce.Text)
+					c.hardResetWS(EventSubWSURL)
+					continue
+				}
+				log.Printf("read error: %v", err)
 			}
 
-			c.WS = conn
-			c.SessionData.SessionID = sessiondata.SessionID
-			c.SessionData.KeepAliveTimeout = sessiondata.KeepAliveTimeout
-			continue
-		}
+			switch {
+			case messageType == websocket.TextMessage:
+				if messageType == websocket.TextMessage {
+					var event EventSubMessage
+					if err := json.Unmarshal(data, &event); err != nil {
+						fmt.Println(fmt.Errorf("json unmarshal: %w", err))
+						fmt.Println(string(data))
+					}
 
+					c.handleEvent(event)
+					continue
+				}
+
+			case messageType == websocket.CloseMessage || messageType == -1:
+				// conn, sessiondata, err := c.newWebsocketConn(EventSubWSURL)
+				// if err != nil {
+				// 	fmt.Println("establish new connection failure: %w", err)
+				// }
+
+				// c.WS = conn
+				// c.SessionData.SessionID = sessiondata.SessionID
+				// c.SessionData.KeepAliveTimeout = sessiondata.KeepAliveTimeout
+				log.Println("messagetype == websocket.CloseMessage || messageType == -1 ERROR PATH.")
+				continue
+
+			default:
+				log.Printf("unknown message type: %d", messageType)
+				log.Println("broken input: " + string(data))
+			}
+
+		}
 	}
 }
 
@@ -297,7 +336,7 @@ func (c *TwitchClient) handleEvent(event EventSubMessage) {
 	case "session_reconnect":
 
 		fmt.Println("Attempting to reconnect")
-		err := c.ReconnectWebsocket(event)
+		err := c.resetWS(event)
 
 		if err != nil {
 			fmt.Println("error in handleEvent session_reconnect %w", err)
@@ -360,14 +399,12 @@ func (c *TwitchClient) helixAPI(ctx context.Context, method string, path string,
 
 func (c *TwitchClient) postHelixJSON(ctx context.Context, path string, in any, out any) error {
 
-	const base = "https://api.twitch.tv/helix"
-
 	b, err := json.Marshal(in)
 	if err != nil {
 		return fmt.Errorf("marshal request: %w", err)
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, base+path, bytes.NewReader(b))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, HelixBaseURL+path, bytes.NewReader(b))
 	if err != nil {
 		return fmt.Errorf("posthelixjson: %w", err)
 	}
