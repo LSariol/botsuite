@@ -303,15 +303,10 @@ func (c *TwitchClient) listen(ctx context.Context) {
 				}
 
 			case messageType == websocket.CloseMessage || messageType == -1:
-				// conn, sessiondata, err := c.newWebsocketConn(EventSubWSURL)
-				// if err != nil {
-				// 	fmt.Println("establish new connection failure: %w", err)
-				// }
-
-				// c.WS = conn
-				// c.SessionData.SessionID = sessiondata.SessionID
-				// c.SessionData.KeepAliveTimeout = sessiondata.KeepAliveTimeout
+				log.Println("Read error, should be wsarecv")
 				log.Println("messagetype == websocket.CloseMessage || messageType == -1 ERROR PATH.")
+				log.Printf("%d: %s", messageType, err.Error())
+				c.hardResetWS(EventSubWSURL)
 				continue
 
 			default:
