@@ -74,20 +74,14 @@ func (c *TwitchClient) hardResetWS(ctx context.Context, URL string) error {
 
 	newConn, _, err := websocket.DefaultDialer.Dial(URL, nil)
 	if err != nil {
+		newConn.Close()
 		return fmt.Errorf("newwebsocketconn dial error: %w", err)
 	}
 
 	var event EventSubMessage
 	if err := newConn.ReadJSON(&event); err != nil {
+		newConn.Close()
 		return fmt.Errorf("newwebsocketconn read json: %w", err)
-	}
-
-	for event.Metadata.MessageType != "session_welcome" {
-		c.handleEvent(event)
-
-		if err := newConn.ReadJSON(&event); err != nil {
-			return fmt.Errorf("newwebsocketconn read json: %w", err)
-		}
 	}
 
 	if c.WS != nil {
@@ -98,6 +92,7 @@ func (c *TwitchClient) hardResetWS(ctx context.Context, URL string) error {
 	c.SessionData.KeepAliveTimeout = event.Payload.Session.KeepaliveTimeoutSeconds
 	c.SessionData.SessionID = event.Payload.Session.ID
 	c.WS = newConn
+	c.refreshTokens()
 	c.JoinAllChannels(ctx)
 	return nil
 }

@@ -24,6 +24,11 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
+	// Create Database Connection
+	if err := deps.DB.Connect(ctx); err != nil {
+		log.Fatal(err)
+	}
+
 	// Create Registry
 	var register *registry.Registry = registry.NewRegistry()
 	registry.RegisterAll(register)

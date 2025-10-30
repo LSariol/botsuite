@@ -81,21 +81,6 @@ func (c *TwitchClient) Run(ctx context.Context) error {
 	return nil
 }
 
-func (c *TwitchClient) Stop(ctx context.Context) error {
-	return nil
-}
-
-func (c *TwitchClient) Restart(ctx context.Context) error {
-
-	return nil
-}
-
-// Gracefully closes the websocket connection
-func (c *TwitchClient) Close(ctx context.Context) error {
-
-	return nil
-}
-
 func (c *TwitchClient) Events() <-chan adapter.Envelope {
 	return c.events
 }
@@ -281,12 +266,9 @@ func (c *TwitchClient) listen(ctx context.Context) {
 		default:
 			messageType, data, err := c.WS.ReadMessage()
 			if err != nil {
-				if ce, ok := err.(*websocket.CloseError); ok {
-					log.Printf("peer sent close: code=%d text=%q", ce.Code, ce.Text)
-					c.hardResetWS(ctx, EventSubWSURL)
-					continue
-				}
-				log.Printf("read error: %v", err)
+				fmt.Printf("read error: %q\n", err)
+				c.hardResetWS(ctx, EventSubWSURL)
+				continue
 			}
 
 			switch {
@@ -376,7 +358,6 @@ func (c *TwitchClient) handleEvent(event EventSubMessage) {
 
 				c.events <- envelope
 			}
-			fmt.Printf("%s @%s: %s\n", event.Payload.Event.BroadcasterUserName, event.Payload.Event.ChatterUserName, event.Payload.Event.Message.Text)
 
 		default:
 			fmt.Printf("Unknown notification type '%s'\n", event.Payload.Subscription.Type)
@@ -468,4 +449,20 @@ func parseCommand(msg string) (string, string) {
 		return msg[:i], msg[i+1:]
 	}
 
+}
+
+// Adapter Functions
+func (c *TwitchClient) Stop(ctx context.Context) error {
+	return nil
+}
+
+func (c *TwitchClient) Restart(ctx context.Context) error {
+
+	return nil
+}
+
+// Gracefully closes the websocket connection
+func (c *TwitchClient) Close(ctx context.Context) error {
+
+	return nil
 }

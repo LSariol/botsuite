@@ -6,13 +6,14 @@ import (
 	"time"
 
 	"github.com/lsariol/botsuite/internal/config"
+	"github.com/lsariol/botsuite/internal/database"
 )
 
 type Deps struct {
 	Config   config.Config
 	HTTP     *http.Client
 	Logger   string
-	DB       string
+	DB       *database.Database
 	BootTime time.Time
 }
 
@@ -39,7 +40,7 @@ func NewDependencies() (*Deps, error) {
 	dependencies.HTTP = client
 	dependencies.Config = cfg
 	dependencies.Logger = "*zap.Logger"
-	dependencies.DB = "*db.Store"
+	dependencies.DB = database.NewDatabase()
 	dependencies.BootTime = time.Now()
 
 	return &dependencies, nil

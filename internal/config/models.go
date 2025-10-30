@@ -14,6 +14,14 @@ type TwitchConfig struct {
 	WebSocketURL     string
 	APIURL           string
 	SubURL           string
+	DatabaseConfig   DatabaseConfig
+}
+
+type DatabaseConfig struct {
+	DatabaseURL      string
+	DatabaseUsername string
+	DatabasePassword string
+	DatabaseName     string
 }
 
 func (cfg TwitchConfig) ToDict() map[string]string {
@@ -26,6 +34,10 @@ func (cfg TwitchConfig) ToDict() map[string]string {
 	d["TWITCH_BOT_USER_ACCESS_TOKEN"] = cfg.UserAccessToken
 	d["TWITCH_BOT_USER_REFRESH_TOKEN"] = cfg.UserRefreshToken
 	d["TWITCH_BOT_ID"] = cfg.BotID
+	d["BOTSUITE_DATABASE_URL"] = cfg.DatabaseConfig.DatabaseURL
+	d["BOTSUITE_DATABASE_USERNAME"] = cfg.DatabaseConfig.DatabaseUsername
+	d["BOTSUITE_DATABASE_PASSWORD"] = cfg.DatabaseConfig.DatabasePassword
+	d["BOTSUITE_DATABASE_NAME"] = cfg.DatabaseConfig.DatabaseName
 
 	return d
 }

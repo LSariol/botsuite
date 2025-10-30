@@ -23,6 +23,10 @@ func Load() (Config, error) {
 	twitch.UserAccessToken = os.Getenv("TWITCH_BOT_USER_ACCESS_TOKEN")
 	twitch.UserRefreshToken = os.Getenv("TWITCH_BOT_USER_REFRESH_TOKEN")
 	twitch.BotID = os.Getenv("TWITCH_BOT_ID")
+	twitch.DatabaseConfig.DatabaseURL = os.Getenv("BOTSUITE_DATABASE_URL")
+	twitch.DatabaseConfig.DatabaseUsername = os.Getenv("BOTSUITE_DATABASE_USERNAME")
+	twitch.DatabaseConfig.DatabasePassword = os.Getenv("BOTSUITE_DATABASE_PASSWORD")
+	twitch.DatabaseConfig.DatabaseName = os.Getenv("BOTSUITE_DATABASE_NAME")
 
 	cfg.Twitch = twitch
 
