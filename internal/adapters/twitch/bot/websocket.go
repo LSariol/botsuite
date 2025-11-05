@@ -8,10 +8,10 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-func (c *TwitchClient) resetWS(reconnectmsg EventSubMessage) error {
+func (c *TwitchClient) resetWS(ctx context.Context, reconnectmsg EventSubMessage) error {
 
 	reconnectUrl := reconnectmsg.Payload.Session.ReconnectURL
-	newConn, sessionData, err := c.dialWebsocket(reconnectUrl)
+	newConn, sessionData, err := c.dialWebsocket(ctx, reconnectUrl)
 	if err != nil {
 		return fmt.Errorf("reconnectwebsocket error: %w", err)
 	}
@@ -35,12 +35,12 @@ func (c *TwitchClient) resetWS(reconnectmsg EventSubMessage) error {
 			return nil
 		}
 
-		c.handleEvent(event)
+		c.ConsumeEvent(ctx, event)
 	}
 
 }
 
-func (c *TwitchClient) dialWebsocket(URL string) (*websocket.Conn, SessionData, error) {
+func (c *TwitchClient) dialWebsocket(ctx context.Context, URL string) (*websocket.Conn, SessionData, error) {
 
 	var sD SessionData
 
@@ -55,7 +55,7 @@ func (c *TwitchClient) dialWebsocket(URL string) (*websocket.Conn, SessionData, 
 	}
 
 	for event.Metadata.MessageType != "session_welcome" {
-		c.handleEvent(event)
+		c.ConsumeEvent(ctx, event)
 
 		if err := newConn.ReadJSON(&event); err != nil {
 			return nil, sD, fmt.Errorf("newwebsocketconn read json: %w", err)
@@ -93,6 +93,12 @@ func (c *TwitchClient) hardResetWS(ctx context.Context, URL string) error {
 	c.SessionData.SessionID = event.Payload.Session.ID
 	c.WS = newConn
 	c.refreshTokens()
-	c.JoinAllChannels(ctx)
+
+	var channelIDs []string
+	for _, c := range c.SessionData.Channels {
+		channelIDs = append(channelIDs, c.ID)
+	}
+
+	c.Join(ctx, channelIDs)
 	return nil
 }

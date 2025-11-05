@@ -50,7 +50,7 @@ func main() {
 	go twitchClient.Run(ctx)
 
 	go func() {
-		for env := range twitchClient.Events() {
+		for env := range twitchClient.OutBoundEvents() {
 			router.Inbound() <- env
 		}
 	}()
@@ -60,7 +60,7 @@ func main() {
 
 			switch resp.Platform {
 			case "twitch":
-				twitchClient.Deliver(ctx, resp)
+				twitchClient.DeliverResponse(ctx, resp)
 			case "discord":
 				//discord Chew
 				continue

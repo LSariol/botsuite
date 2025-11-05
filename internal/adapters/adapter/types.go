@@ -40,3 +40,9 @@ type Response struct {
 	Success bool
 	Error   bool
 }
+
+type HealthStatus struct {
+	Name   string
+	Status string
+	Detail string
+}

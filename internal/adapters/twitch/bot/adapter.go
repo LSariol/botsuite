@@ -15,6 +15,7 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/lsariol/botsuite/internal/adapters/adapter"
 	"github.com/lsariol/botsuite/internal/adapters/twitch/auth"
+	twitchdb "github.com/lsariol/botsuite/internal/adapters/twitch/database"
 	"github.com/lsariol/botsuite/internal/config"
 )
 
@@ -38,19 +39,20 @@ type TwitchClient struct {
 	WS          *websocket.Conn
 	Config      *config.TwitchConfig
 	SessionData SessionData
+	DB          *twitchdb.Store
 	events      chan adapter.Envelope
 }
 
-func NewTwitchBot(client *http.Client, cfg *config.TwitchConfig) *TwitchClient {
+func NewTwitchBot(client *http.Client, cfg *config.TwitchConfig, dbStore *twitchdb.Store) *TwitchClient {
 	return &TwitchClient{
 		HTTP:   client,
 		Config: cfg,
+		DB:     dbStore,
 		events: make(chan adapter.Envelope, 100),
 	}
 }
 
-func (c *TwitchClient) Run(ctx context.Context) error {
-
+func (c *TwitchClient) Initilize(ctx context.Context) error {
 	if err := c.refreshTokens(); err != nil {
 		return fmt.Errorf("run: %w", err)
 	}
@@ -59,7 +61,7 @@ func (c *TwitchClient) Run(ctx context.Context) error {
 		return fmt.Errorf("run: %w", err)
 	}
 
-	conn, sessionData, err := c.dialWebsocket(EventSubWSURL)
+	conn, sessionData, err := c.dialWebsocket(ctx, EventSubWSURL)
 	if err != nil {
 		return fmt.Errorf("run: %w", err)
 	}
@@ -67,25 +69,162 @@ func (c *TwitchClient) Run(ctx context.Context) error {
 	c.SessionData.SessionID = sessionData.SessionID
 	c.SessionData.KeepAliveTimeout = sessionData.KeepAliveTimeout
 
-	// Start websocket so it doesnt time out when joining channels
-	go c.listen(ctx)
-
-	failedChannels := c.JoinAllChannels(ctx)
-
-	if len(failedChannels) > 0 {
-		for k, v := range failedChannels {
-			fmt.Printf("failed to connect to %s: %w\n", k, v)
-		}
+	var channelIDs []string
+	for _, c := range c.SessionData.Channels {
+		channelIDs = append(channelIDs, c.ID)
 	}
+
+	c.Join(ctx, channelIDs)
 
 	return nil
 }
 
-func (c *TwitchClient) Events() <-chan adapter.Envelope {
+func (c *TwitchClient) Run(ctx context.Context) error {
+
+	if err := c.Initilize(ctx); err != nil {
+		return fmt.Errorf("initilization error: %w", err)
+	}
+
+	for {
+		select {
+		case <-ctx.Done():
+			log.Println("context canceled, stopping read loop")
+			return nil
+
+		default:
+			messageType, data, err := c.WS.ReadMessage()
+			if err != nil {
+				fmt.Printf("read error: %q\n", err)
+				c.hardResetWS(ctx, EventSubWSURL)
+				continue
+			}
+
+			switch {
+			case messageType == websocket.TextMessage:
+				if messageType == websocket.TextMessage {
+					var event EventSubMessage
+					if err := json.Unmarshal(data, &event); err != nil {
+						fmt.Println(fmt.Errorf("json unmarshal: %w", err))
+						fmt.Println(string(data))
+					}
+
+					c.ConsumeEvent(ctx, event)
+					continue
+				}
+
+			case messageType == websocket.CloseMessage || messageType == -1:
+				log.Println("Read error, should be wsarecv")
+				log.Println("messagetype == websocket.CloseMessage || messageType == -1 ERROR PATH.")
+				log.Printf("%d: %s", messageType, err.Error())
+				c.hardResetWS(ctx, EventSubWSURL)
+				continue
+
+			default:
+				log.Printf("unknown message type: %d", messageType)
+				log.Println("broken input: " + string(data))
+			}
+
+		}
+	}
+}
+
+// Adapter Functions
+func (c *TwitchClient) Shutdown(ctx context.Context) error {
+	return nil
+}
+
+func (c *TwitchClient) Restart(ctx context.Context) error {
+
+	return nil
+}
+
+func (c *TwitchClient) OutBoundEvents() <-chan adapter.Envelope {
 	return c.events
 }
 
-func (c *TwitchClient) Deliver(ctx context.Context, r adapter.Response) error {
+func (c *TwitchClient) ConsumeEvent(ctx context.Context, event EventSubMessage) {
+
+	switch event.Metadata.MessageType {
+	case "session_welcome":
+		return
+
+	case "session_keepalive":
+		//Add a timer to see if the socket is alive and healthy
+		return
+
+	case "session_reconnect":
+
+		fmt.Println("Attempting to reconnect")
+		err := c.resetWS(ctx, event)
+
+		if err != nil {
+			fmt.Println("error in handleEvent session_reconnect %w", err)
+			panic(err)
+		}
+		return
+
+	case "revocation":
+
+		fmt.Println("Revocation")
+		//youll receive the message once and then no longer receive messages for the specified user and subscription type
+		// check status field on how to handle
+
+		switch event.Payload.Subscription.Status {
+
+		case "user_removed":
+			// user_removed -> user mentioned in the subscription no longer exists. ( Channel banned or whatver)
+			fmt.Println("User Removed")
+			return
+
+		case "authorization_revoked":
+			// authorization_revoked -> user revoked the authorization token that the subscription relied on (user removed bot permissions), remove user from subscription list
+			fmt.Println("Auth Revoked")
+			return
+
+		case "version_removed":
+			// version_removed -> the subscribed to subscription type and version is no longer supported
+			fmt.Println("Version removed")
+			return
+		}
+		return
+
+	case "notification":
+		//check if message is a command
+
+		switch event.Payload.Subscription.Type {
+		case "channel.chat.message":
+
+			log.Printf("%s: @%s %s\n", event.Payload.Event.BroadcasterUserName, event.Payload.Event.ChatterUserName, event.Payload.Event.Message.Text)
+
+			if event.Payload.Event.Message.Text[0] == '!' {
+				cmd, body := ConsumeMessage(event.Payload.Event.Message.Text)
+				var envelope adapter.Envelope = pack(&event, cmd, body)
+
+				c.events <- envelope
+			}
+
+		default:
+			fmt.Printf("Unknown notification type '%s'\n", event.Payload.Subscription.Type)
+			//log error to db
+		}
+
+	default:
+
+	}
+}
+
+func ConsumeMessage(msg string) (string, string) {
+
+	i := strings.IndexByte(msg, ' ')
+	if i == -1 {
+		return msg, ""
+	} else {
+		return msg[:i], msg[i+1:]
+	}
+
+}
+
+func (c *TwitchClient) DeliverResponse(ctx context.Context, r adapter.Response) error {
 
 	reqBody := chatMessageReq{
 		BroadcasterID: r.ChannelID,
@@ -96,7 +235,7 @@ func (c *TwitchClient) Deliver(ctx context.Context, r adapter.Response) error {
 	var out any
 	if err := c.postHelixJSON(ctx, "/chat/messages", reqBody, &out); err != nil {
 		if errors.Is(err, ErrMissingChannelBot) {
-			c.Leave(ctx, r.ChannelID)
+			c.Leave(ctx, []string{r.ChannelID})
 		}
 		return err
 	}
@@ -104,101 +243,96 @@ func (c *TwitchClient) Deliver(ctx context.Context, r adapter.Response) error {
 
 }
 
-func (c *TwitchClient) Join(ctx context.Context, targetID string) error {
+func (c *TwitchClient) Join(ctx context.Context, targetIDs []string) error {
 
-	body := map[string]any{
-		"type":    "channel.chat.message",
-		"version": "1",
-		"condition": map[string]string{
-			"broadcaster_user_id": targetID,
-			"user_id":             c.Config.BotID,
-		},
-		"transport": map[string]string{
-			"method":     "websocket",
-			"session_id": c.SessionData.SessionID,
-		},
-	}
+	for _, channelID := range targetIDs {
 
-	buf, _ := json.Marshal(body)
-	req, err := http.NewRequest("POST", EventSubAPIBaseURL, bytes.NewReader(buf))
-	if err != nil {
-		return fmt.Errorf("join: %w", err)
-	}
-
-	req.Header.Set("Authorization", "Bearer "+c.Config.UserAccessToken) // MUST be a user token for WebSocket subs
-	req.Header.Set("Client-Id", c.Config.AppClientID)
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := c.HTTP.Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	var respData EventSubJoinResponse
-	if err := json.NewDecoder(resp.Body).Decode(&respData); err != nil {
-		return err
-	}
-
-	for _, sub := range respData.Data {
-		c.SessionData.Channels[targetID].SubscriptionID = sub.ID
-	}
-
-	return nil
-}
-
-func (c *TwitchClient) JoinAllChannels(ctx context.Context) map[string]error {
-	failedChannels := make(map[string]error)
-
-	for _, channel := range c.SessionData.Channels {
-		if err := c.Join(ctx, channel.ID); err != nil {
-			fmt.Printf("failed to join %s: %w", channel.Username, err.Error())
-			failedChannels[channel.ID] = err
+		body := map[string]any{
+			"type":    "channel.chat.message",
+			"version": "1",
+			"condition": map[string]string{
+				"broadcaster_user_id": channelID,
+				"user_id":             c.Config.BotID,
+			},
+			"transport": map[string]string{
+				"method":     "websocket",
+				"session_id": c.SessionData.SessionID,
+			},
 		}
-		fmt.Printf("Connected to %s\n", channel.Username)
-	}
-	return failedChannels
-}
 
-func (c *TwitchClient) Leave(ctx context.Context, target string) error {
+		buf, _ := json.Marshal(body)
+		req, err := http.NewRequest("POST", EventSubAPIBaseURL, bytes.NewReader(buf))
+		if err != nil {
+			return fmt.Errorf("join: %w", err)
+		}
 
-	subscriptionID := c.SessionData.Channels[target].SubscriptionID
-	req, err := http.NewRequestWithContext(ctx, http.MethodDelete, EventSubAPIBaseURL+"?id="+subscriptionID, nil)
-	if err != nil {
-		return fmt.Errorf("unsubscribe: %w", err)
-	}
+		req.Header.Set("Authorization", "Bearer "+c.Config.UserAccessToken) // MUST be a user token for WebSocket subs
+		req.Header.Set("Client-Id", c.Config.AppClientID)
+		req.Header.Set("Content-Type", "application/json")
 
-	req.Header.Set("Authorization", "Bearer "+c.Config.UserAccessToken) // MUST be a user token for WebSocket subs
-	req.Header.Set("Client-Id", c.Config.AppClientID)
+		resp, err := c.HTTP.Do(req)
+		if err != nil {
+			return err
+		}
+		defer resp.Body.Close()
 
-	resp, err := c.HTTP.Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
+		var respData EventSubJoinResponse
+		if err := json.NewDecoder(resp.Body).Decode(&respData); err != nil {
+			return err
+		}
 
-	switch resp.StatusCode {
-	case http.StatusNoContent:
-		fmt.Println("Successfully delete")
-
-		//db.Purge(user)
-
-	case http.StatusBadRequest:
-		fmt.Println("400: Bad Delete")
-
-	case http.StatusUnauthorized:
-		fmt.Println("401: Unauthorized")
-
-	case http.StatusNotFound:
-		fmt.Println("404: Subscription Not found")
-
+		for _, sub := range respData.Data {
+			c.SessionData.Channels[channelID].SubscriptionID = sub.ID
+		}
 	}
 
 	return nil
 }
 
-func (c *TwitchClient) Health(ctx context.Context) error {
+func (c *TwitchClient) Leave(ctx context.Context, targets []string) error {
+
+	for _, channelID := range targets {
+
+		subscriptionID := c.SessionData.Channels[channelID].SubscriptionID
+		req, err := http.NewRequestWithContext(ctx, http.MethodDelete, EventSubAPIBaseURL+"?id="+subscriptionID, nil)
+		if err != nil {
+			return fmt.Errorf("unsubscribe: %w", err)
+		}
+
+		req.Header.Set("Authorization", "Bearer "+c.Config.UserAccessToken) // MUST be a user token for WebSocket subs
+		req.Header.Set("Client-Id", c.Config.AppClientID)
+
+		resp, err := c.HTTP.Do(req)
+		if err != nil {
+			return err
+		}
+		defer resp.Body.Close()
+
+		switch resp.StatusCode {
+		case http.StatusNoContent:
+			fmt.Println("Successfully delete")
+
+			//db.Purge(user)
+
+		case http.StatusBadRequest:
+			fmt.Println("400: Bad Delete")
+
+		case http.StatusUnauthorized:
+			fmt.Println("401: Unauthorized")
+
+		case http.StatusNotFound:
+			fmt.Println("404: Subscription Not found")
+
+		}
+	}
+
 	return nil
+}
+
+func (c *TwitchClient) Health(ctx context.Context) adapter.HealthStatus {
+	status := adapter.HealthStatus{}
+
+	return status
 }
 
 func (c *TwitchClient) Name() string {
@@ -250,123 +384,6 @@ func (c *TwitchClient) loadChannels() error {
 
 	c.SessionData.Channels = channels
 	return nil
-}
-
-// Looping function to read chat messages in and parse them
-func (c *TwitchClient) listen(ctx context.Context) {
-
-	fmt.Println("TwitchBot is listening")
-
-	for {
-		select {
-		case <-ctx.Done():
-			log.Println("context canceled, stopping read loop")
-			return
-
-		default:
-			messageType, data, err := c.WS.ReadMessage()
-			if err != nil {
-				fmt.Printf("read error: %q\n", err)
-				c.hardResetWS(ctx, EventSubWSURL)
-				continue
-			}
-
-			switch {
-			case messageType == websocket.TextMessage:
-				if messageType == websocket.TextMessage {
-					var event EventSubMessage
-					if err := json.Unmarshal(data, &event); err != nil {
-						fmt.Println(fmt.Errorf("json unmarshal: %w", err))
-						fmt.Println(string(data))
-					}
-
-					c.handleEvent(event)
-					continue
-				}
-
-			case messageType == websocket.CloseMessage || messageType == -1:
-				log.Println("Read error, should be wsarecv")
-				log.Println("messagetype == websocket.CloseMessage || messageType == -1 ERROR PATH.")
-				log.Printf("%d: %s", messageType, err.Error())
-				c.hardResetWS(ctx, EventSubWSURL)
-				continue
-
-			default:
-				log.Printf("unknown message type: %d", messageType)
-				log.Println("broken input: " + string(data))
-			}
-
-		}
-	}
-}
-
-func (c *TwitchClient) handleEvent(event EventSubMessage) {
-
-	switch event.Metadata.MessageType {
-	case "session_welcome":
-		return
-
-	case "session_keepalive":
-		//Add a timer to see if the socket is alive and healthy
-		return
-
-	case "session_reconnect":
-
-		fmt.Println("Attempting to reconnect")
-		err := c.resetWS(event)
-
-		if err != nil {
-			fmt.Println("error in handleEvent session_reconnect %w", err)
-			panic(err)
-		}
-		return
-
-	case "revocation":
-
-		fmt.Println("Revocation")
-		//youll receive the message once and then no longer receive messages for the specified user and subscription type
-		// check status field on how to handle
-
-		switch event.Payload.Subscription.Status {
-
-		case "user_removed":
-			// user_removed -> user mentioned in the subscription no longer exists. ( Channel banned or whatver)
-			fmt.Println("User Removed")
-			return
-
-		case "authorization_revoked":
-			// authorization_revoked -> user revoked the authorization token that the subscription relied on (user removed bot permissions), remove user from subscription list
-			fmt.Println("Auth Revoked")
-			return
-
-		case "version_removed":
-			// version_removed -> the subscribed to subscription type and version is no longer supported
-			fmt.Println("Version removed")
-			return
-		}
-		return
-
-	case "notification":
-		//check if message is a command
-
-		switch event.Payload.Subscription.Type {
-		case "channel.chat.message":
-
-			if event.Payload.Event.Message.Text[0] == '!' {
-				cmd, body := parseCommand(event.Payload.Event.Message.Text)
-				var envelope adapter.Envelope = pack(&event, cmd, body)
-
-				c.events <- envelope
-			}
-
-		default:
-			fmt.Printf("Unknown notification type '%s'\n", event.Payload.Subscription.Type)
-			//log error to db
-		}
-
-	default:
-
-	}
 }
 
 func (c *TwitchClient) helixAPI(ctx context.Context, method string, path string, in any, out any) error {
@@ -438,31 +455,4 @@ func pack(msg *EventSubMessage, command string, body string) adapter.Envelope {
 	fmt.Printf("[%s] %s: @%s %s\n", timestamp, newEnvelope.ChannelName, newEnvelope.Username, body)
 
 	return newEnvelope
-}
-
-func parseCommand(msg string) (string, string) {
-
-	i := strings.IndexByte(msg, ' ')
-	if i == -1 {
-		return msg, ""
-	} else {
-		return msg[:i], msg[i+1:]
-	}
-
-}
-
-// Adapter Functions
-func (c *TwitchClient) Stop(ctx context.Context) error {
-	return nil
-}
-
-func (c *TwitchClient) Restart(ctx context.Context) error {
-
-	return nil
-}
-
-// Gracefully closes the websocket connection
-func (c *TwitchClient) Close(ctx context.Context) error {
-
-	return nil
 }

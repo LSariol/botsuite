@@ -12,6 +12,7 @@ import (
 type Router struct {
 	inbound  chan adapter.Envelope
 	outbound chan adapter.Response
+	adapters map[string]adapter.Adapter
 	registry *registry.Registry
 	rootCtx  context.Context
 }

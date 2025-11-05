@@ -58,7 +58,7 @@ func LoadUserData() ([]UserData, error) {
 
 	var userData []UserData
 
-	data, err := os.ReadFile("internal/db/users.json")
+	data, err := os.ReadFile("internal/database/users.json")
 	if err != nil {
 		if os.IsNotExist(err) {
 			return []UserData{}, nil
@@ -80,7 +80,7 @@ func SaveUserData(userData []UserData) error {
 		return fmt.Errorf("masrhsal: %w", err)
 	}
 
-	if err := os.WriteFile("internal/db/users.json", data, 0644); err != nil {
+	if err := os.WriteFile("internal/database/users.json", data, 0644); err != nil {
 		return fmt.Errorf("write file: %w", err)
 	}
 
