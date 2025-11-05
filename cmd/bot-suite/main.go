@@ -8,6 +8,7 @@ import (
 	"syscall"
 
 	twitchbot "github.com/lsariol/botsuite/internal/adapters/twitch/bot"
+	twitchdb "github.com/lsariol/botsuite/internal/adapters/twitch/database"
 	"github.com/lsariol/botsuite/internal/app"
 	"github.com/lsariol/botsuite/internal/app/registry"
 	"github.com/lsariol/botsuite/internal/app/router"
@@ -25,9 +26,9 @@ func main() {
 	defer stop()
 
 	// Create Database Connection
-	if err := deps.DB.Connect(ctx); err != nil {
-		log.Fatal(err)
-	}
+	// if err := deps.DB.Connect(ctx); err != nil {
+	// 	log.Fatal(err)
+	// }
 
 	// Create Registry
 	var register *registry.Registry = registry.NewRegistry()
@@ -37,7 +38,8 @@ func main() {
 	router := router.NewRouter(ctx, register)
 
 	// Create TwitchClient
-	var twitchClient twitchbot.TwitchClient = *twitchbot.NewTwitchBot(deps.HTTP, &deps.Config.Twitch)
+	var twitchDBStore *twitchdb.Store = twitchdb.NewStore(deps.DB.Pool, deps.DB.ConnString)
+	var twitchClient twitchbot.TwitchClient = *twitchbot.NewTwitchBot(deps.HTTP, &deps.Config.Twitch, twitchDBStore)
 
 	// Start Threads
 
