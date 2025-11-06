@@ -7,7 +7,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	twitchbot "github.com/lsariol/botsuite/internal/adapters/twitch/bot"
+	twitchbot "github.com/lsariol/botsuite/internal/adapters/twitch/client"
 	twitchdb "github.com/lsariol/botsuite/internal/adapters/twitch/database"
 	"github.com/lsariol/botsuite/internal/app"
 	"github.com/lsariol/botsuite/internal/app/registry"
@@ -26,9 +26,9 @@ func main() {
 	defer stop()
 
 	// Create Database Connection
-	// if err := deps.DB.Connect(ctx); err != nil {
-	// 	log.Fatal(err)
-	// }
+	if err := deps.DB.Connect(ctx); err != nil {
+		log.Fatal(err)
+	}
 
 	// Create Registry
 	var register *registry.Registry = registry.NewRegistry()

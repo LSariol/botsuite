@@ -57,7 +57,7 @@ func (c *TwitchClient) Initilize(ctx context.Context) error {
 		return fmt.Errorf("run: %w", err)
 	}
 
-	if err := c.loadChannels(); err != nil {
+	if err := c.loadChannels(ctx); err != nil {
 		return fmt.Errorf("run: %w", err)
 	}
 
@@ -128,8 +128,35 @@ func (c *TwitchClient) Run(ctx context.Context) error {
 	}
 }
 
-// Adapter Functions
+// Stores any persistant data living in memory, and closes all connections
 func (c *TwitchClient) Shutdown(ctx context.Context) error {
+
+	c.SessionData = SessionData{}
+
+	if c.WS != nil {
+		_ = c.WS.Close()
+		c.WS = nil
+	}
+
+	if err := c.loadChannels(ctx); err != nil {
+		return fmt.Errorf("run: %w", err)
+	}
+
+	conn, sessionData, err := c.dialWebsocket(ctx, EventSubWSURL)
+	if err != nil {
+		return fmt.Errorf("run: %w", err)
+	}
+	c.WS = conn
+	c.SessionData.SessionID = sessionData.SessionID
+	c.SessionData.KeepAliveTimeout = sessionData.KeepAliveTimeout
+
+	var channelIDs []string
+	for _, c := range c.SessionData.Channels {
+		channelIDs = append(channelIDs, c.ID)
+	}
+
+	c.Join(ctx, channelIDs)
+
 	return nil
 }
 
@@ -366,23 +393,32 @@ func (c *TwitchClient) refreshTokens() error {
 }
 
 // Loads all channels into config
-func (c *TwitchClient) loadChannels() error {
+func (c *TwitchClient) loadChannels(ctx context.Context) error {
 
 	//Get Users from DB
-	userData, err := auth.LoadUserData()
-	if err != nil {
-		return fmt.Errorf("LoadChannels: %w", err)
-	}
+	// userData, err := auth.LoadUserData()
+	// if err != nil {
+	// 	return fmt.Errorf("LoadChannels: %w", err)
+	// }
 
-	channels := make(map[string]*TwitchChannel)
-	for _, user := range userData {
-		var channel TwitchChannel
-		channel.ID = user.UserID
-		channel.Username = user.Username
-		channels[channel.ID] = &channel
+	// channels := make(map[string]*TwitchChannel)
+	// for _, user := range userData {
+	// 	var channel TwitchChannel
+	// 	channel.ID = user.UserID
+	// 	channel.Username = user.Username
+	// 	channels[channel.ID] = &channel
+	// }
+
+	// c.SessionData.Channels = channels
+	// return nil
+
+	channels, err := c.DB.GetAllChannels(ctx)
+	if err != nil {
+		return fmt.Errorf("get all channels: %w", err)
 	}
 
 	c.SessionData.Channels = channels
+
 	return nil
 }
 

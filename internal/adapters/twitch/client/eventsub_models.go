@@ -99,17 +99,6 @@ type Session struct {
 }
 
 // SessionData Types______________________________________________________________________________
-type SessionData struct {
-	SessionID        string
-	KeepAliveTimeout int
-	Channels         map[string]*TwitchChannel
-}
-
-type TwitchChannel struct {
-	ID             string
-	Username       string
-	SubscriptionID string
-}
 
 // Deliver Types
 // Strongly-typed payloads

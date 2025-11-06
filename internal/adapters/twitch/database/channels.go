@@ -5,14 +5,7 @@ import (
 	"fmt"
 )
 
-type Channel struct {
-	UserID       string
-	Username     string
-	AccessToken  string
-	RefreshToken string
-}
-
-func (s *Store) AddChannel(ctx context.Context, ch Channel) error {
+func (s *Store) AddChannel(ctx context.Context, ch ChannelInsert) error {
 	query := `
 	INSERT INTO botsuite.twitch_channels (user_id, username, access_token, refresh_token)
 	VALUES ($1, $2, $3, $4)
@@ -32,26 +25,45 @@ func (s *Store) AddChannel(ctx context.Context, ch Channel) error {
 	return err
 }
 
-func (s *Store) RemoveChannel() error {
+func (s *Store) RemoveChannel(ctx context.Context, channelID string) error {
 	return nil
 }
 
-func (s *Store) BanChannel() error {
+func (s *Store) BanChannel(ctx context.Context, channelID string) error {
 	return nil
 }
 
-func (s *Store) GetAllChannels(ctx context.Context) error {
+func (s *Store) GetAllChannels(ctx context.Context) (map[string]*TwitchChannel, error) {
 
 	query := `
-	SELECT user_id, username
-	FROM botsuite.twitch_channels
-	WHERE active = TRUE;
+	SELECT tc.user_id, tc.username, ts.command_prefix
+	FROM botsuite.twitch_channels AS tc
+	LEFT JOIN botsuite.twitch_settings AS ts
+	ON tc.user_id = ts.user_id
+	WHERE tc.active = TRUE;
 	`
-	println(query)
-	return nil
+	rows, err := s.pool.Query(ctx, query)
+	if err != nil {
+		return nil, fmt.Errorf("query getallchannels: %w", err)
+	}
+	defer rows.Close()
+
+	channels := make(map[string]*TwitchChannel)
+
+	for rows.Next() {
+		var channel TwitchChannel
+		if err := rows.Scan(&channel.ID, &channel.Username, &channel.CommandPrefix); err != nil {
+			return nil, fmt.Errorf("scan row: %w", err)
+		}
+
+		channels[channel.ID] = &channel
+	}
+
+	return channels, nil
 }
 
-func (s *Store) LogEvent(ctx context.Context, ch Channel, action string) error {
+// Action can either be grant or revoke
+func (s *Store) LogEvent(ctx context.Context, ch ChannelInsert, action string) error {
 	query := `
 	INSERT INTO botsuite.twitch_channel_events (user_id, username, action)
 	VALUES ($1, $2, $3)
