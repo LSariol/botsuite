@@ -9,13 +9,14 @@ import (
 	"time"
 
 	"github.com/lsariol/botsuite/internal/adapters/adapter"
-	"github.com/lsariol/botsuite/internal/app"
+	"github.com/lsariol/botsuite/internal/app/dependencies"
 )
 
 type RandomDog struct{}
 
-func (RandomDog) Name() string      { return "!randomdog" }
-func (RandomDog) Aliases() []string { return nil }
+func (RandomDog) Name() string             { return "randomdog" }
+func (RandomDog) Aliases() []string        { return nil }
+func (RandomDog) TriggerPhrases() []string { return nil }
 func (RandomDog) Description() string {
 	return "Gives you a random dog picture,gif or video from random.dog/woof.json"
 }
@@ -23,7 +24,7 @@ func (RandomDog) Usage() string          { return "!randomdog" }
 func (RandomDog) Timeout() time.Duration { return 20 * time.Second }
 
 // Returns a message with a link to a picture, gif or video of a random dog from random.dog
-func (RandomDog) Execute(ctx context.Context, e adapter.Envelope, deps *app.Deps) (adapter.Response, error) {
+func (RandomDog) Execute(ctx context.Context, e adapter.Envelope, deps *dependencies.Deps) (adapter.Response, error) {
 
 	type randomDog struct {
 		FileSize int    `json:"fileSizeBytes"`

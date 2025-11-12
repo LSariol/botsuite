@@ -10,9 +10,7 @@ import (
 	"github.com/lsariol/botsuite/internal/config"
 )
 
-func RefreshAppAccessToken(cfg *config.TwitchConfig, HTTP *http.Client) error {
-
-	var appAccessToken string
+func (c *AuthClient) RefreshAppAccessToken(cfg *config.TwitchConfig, HTTP *http.Client) error {
 
 	vals := url.Values{}
 	vals.Set("client_id", cfg.AppClientID)

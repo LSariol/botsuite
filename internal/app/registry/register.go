@@ -3,6 +3,7 @@ package registry
 import (
 	"github.com/lsariol/botsuite/internal/commands/catfacts"
 	"github.com/lsariol/botsuite/internal/commands/help"
+	"github.com/lsariol/botsuite/internal/commands/oneuppuzzle"
 	"github.com/lsariol/botsuite/internal/commands/ping"
 	"github.com/lsariol/botsuite/internal/commands/randomdog"
 	"github.com/lsariol/botsuite/internal/commands/request"
@@ -18,5 +19,6 @@ func RegisterAll(r *Registry) {
 	r.Register(randomdog.RandomDog{})
 	r.Register(request.Request{})
 	r.Register(uptime.UpTime{})
+	r.Register(oneuppuzzle.OneUpPuzzle{})
 
 }

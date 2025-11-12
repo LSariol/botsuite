@@ -6,18 +6,19 @@ import (
 	"time"
 
 	"github.com/lsariol/botsuite/internal/adapters/adapter"
-	"github.com/lsariol/botsuite/internal/app"
+	"github.com/lsariol/botsuite/internal/app/dependencies"
 )
 
 type UpTime struct{}
 
-func (UpTime) Name() string           { return "!uptime" }
-func (UpTime) Aliases() []string      { return nil }
-func (UpTime) Description() string    { return "Latency check." }
-func (UpTime) Usage() string          { return "!ping" }
-func (UpTime) Timeout() time.Duration { return 3 * time.Second }
+func (UpTime) Name() string             { return "uptime" }
+func (UpTime) Aliases() []string        { return nil }
+func (UpTime) TriggerPhrases() []string { return nil }
+func (UpTime) Description() string      { return "Latency check." }
+func (UpTime) Usage() string            { return "!ping" }
+func (UpTime) Timeout() time.Duration   { return 3 * time.Second }
 
-func (UpTime) Execute(ctx context.Context, e adapter.Envelope, deps *app.Deps) (adapter.Response, error) {
+func (UpTime) Execute(ctx context.Context, e adapter.Envelope, deps *dependencies.Deps) (adapter.Response, error) {
 
 	uptime := time.Since(deps.BootTime)
 	days := int(uptime.Hours()) / 24

@@ -30,17 +30,42 @@ func (s *Store) RemoveChannel(ctx context.Context, channelID string) error {
 }
 
 func (s *Store) BanChannel(ctx context.Context, channelID string) error {
+	query := `
+	UPDATE botsuite.twitch_channels
+	SET banned = TRUE
+	WHERE user_id = $1;
+`
+	_, err := s.pool.Exec(ctx, query, channelID)
+	if err != nil {
+		return fmt.Errorf("failed to ban user %s: %w", channelID, err)
+	}
+
 	return nil
 }
 
-func (s *Store) GetAllChannels(ctx context.Context) (map[string]*TwitchChannel, error) {
+func (s *Store) UnbanChannel(ctx context.Context, channelID string) error {
+	query := `
+	UPDATE botsuite.twitch_channels
+	SET banned = FALSE
+	WHERE user_id = $1;
+`
+	_, err := s.pool.Exec(ctx, query, channelID)
+	if err != nil {
+		return fmt.Errorf("failed to unban user %s: %w", channelID, err)
+	}
+
+	return nil
+}
+
+func (s *Store) GetAllChannels(ctx context.Context) (map[string]TwitchChannel, error) {
 
 	query := `
-	SELECT tc.user_id, tc.username, ts.command_prefix
-	FROM botsuite.twitch_channels AS tc
-	LEFT JOIN botsuite.twitch_settings AS ts
-	ON tc.user_id = ts.user_id
-	WHERE tc.active = TRUE;
+	SELECT user_id, username
+	FROM botsuite.twitch_channels 
+	WHERE 
+		active = TRUE
+		AND
+		banned = FALSE;
 	`
 	rows, err := s.pool.Query(ctx, query)
 	if err != nil {
@@ -48,21 +73,50 @@ func (s *Store) GetAllChannels(ctx context.Context) (map[string]*TwitchChannel, 
 	}
 	defer rows.Close()
 
-	channels := make(map[string]*TwitchChannel)
+	channels := make(map[string]TwitchChannel)
 
 	for rows.Next() {
 		var channel TwitchChannel
-		if err := rows.Scan(&channel.ID, &channel.Username, &channel.CommandPrefix); err != nil {
+		if err := rows.Scan(&channel.UserID, &channel.Username); err != nil {
 			return nil, fmt.Errorf("scan row: %w", err)
 		}
 
-		channels[channel.ID] = &channel
+		channels[channel.UserID] = channel
 	}
 
 	return channels, nil
 }
 
-// Action can either be grant or revoke
+func (s *Store) GetPerChannelSettings(ctx context.Context) (map[string]TwitchChannelSettings, error) {
+
+	query := `
+	SELECT tc.user_ID, tc.username, ts.command_prefix
+	FROM botsuite.twitch_channels AS tc
+	LEFT JOIN botsuite.twitch_settings AS ts
+	ON tc.user_id = ts.user_id
+	WHERE tc.active = TRUE;
+	`
+
+	rows, err := s.pool.Query(ctx, query)
+	if err != nil {
+		return nil, fmt.Errorf("query getallchannels: %w", err)
+	}
+	defer rows.Close()
+
+	perChannelSettings := make(map[string]TwitchChannelSettings)
+
+	for rows.Next() {
+		var setting TwitchChannelSettings
+		if err := rows.Scan(&setting.UserID, &setting.Username, &setting.CommandPrefix); err != nil {
+			return nil, fmt.Errorf("scan row: %w", err)
+		}
+		perChannelSettings[setting.UserID] = setting
+	}
+
+	return perChannelSettings, nil
+}
+
+// Action can either be 'grant', 'revoke', 'ban', 'unban'
 func (s *Store) LogEvent(ctx context.Context, ch ChannelInsert, action string) error {
 	query := `
 	INSERT INTO botsuite.twitch_channel_events (user_id, username, action)

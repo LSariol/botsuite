@@ -1,4 +1,4 @@
-package app
+package dependencies
 
 import (
 	"fmt"
@@ -17,13 +17,15 @@ type Deps struct {
 	BootTime time.Time
 }
 
-func NewDependencies() (*Deps, error) {
+func New() *Deps {
+	return &Deps{}
+}
 
-	var dependencies Deps
+func (d *Deps) Load() error {
 
 	cfg, err := config.Load()
 	if err != nil {
-		return &dependencies, fmt.Errorf("NewDeps: %w", err)
+		return fmt.Errorf("NewDeps: %w", err)
 	}
 
 	tr := &http.Transport{
@@ -37,13 +39,13 @@ func NewDependencies() (*Deps, error) {
 		Timeout:   10 * time.Second,
 	}
 
-	dependencies.HTTP = client
-	dependencies.Config = cfg
-	dependencies.Logger = "*zap.Logger"
-	dependencies.DB = database.NewDatabase()
-	dependencies.BootTime = time.Now()
+	d.HTTP = client
+	d.Config = cfg
+	d.Logger = "*zap.Logger"
+	d.DB = database.NewDatabase()
+	d.BootTime = time.Now()
 
-	return &dependencies, nil
+	return nil
 }
 
 func (d *Deps) RefreshTwitchUserTokens(userAccessToken string, refreshToken string) {

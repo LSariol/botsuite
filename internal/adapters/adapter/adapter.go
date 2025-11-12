@@ -1,17 +1,24 @@
 package adapter
 
-import "context"
+import (
+	"context"
+)
 
 type Adapter interface {
 
 	// Lifecycle
-	Initilize(ctx context.Context) error // Load configurations, set up connections, ect
-	Run(ctx context.Context) error       // Starts long lived loops; blocks until ctx cancel
-	Shutdown(ctx context.Context) error  // Gracefully stops the Adapter
-	Restart(ctx context.Context) error   // Re-Initilizes the Adapter
+	Run(ctx context.Context) error // Starts long lived loops; blocks until ctx cancel
+	Shutdown(ctx context.Context)  // Gracefully stops the Adapter
+
+	// This will be handled by the adapter orchestrator
+	//Restart(ctx context.Context) error  // Re-Initilizes the Adapter
 
 	// Streams
-	OutBoundEvents() <-chan Envelope // Read only channel for Registry Router
+
+	//Not sure if necessary
+	// inEvents() <-chan Envelope
+	//OutboundEnvelopes() chan<- Envelope // Read only channel for Registry Router
+	DeliverResponse(r Response)
 
 	// Event Handling
 
@@ -24,11 +31,11 @@ type Adapter interface {
 
 	// Not needed either?
 	// ReceiveResponse() error                                // Receives outputs from the Registry Router
-	DeliverResponse(ctx context.Context, r Response) error // Send Response back to platform
+	// DeliverResponse(ctx context.Context, r Response) error // Send Response back to platform
 
 	// Dynamic Membership
-	Join(ctx context.Context, targets []string) error  // Joins a single connection (channel, server, group)
-	Leave(ctx context.Context, targets []string) error // Leaves a single connection (channel, server, group)
+	// Join(ctx context.Context, targets []string) error  // Joins a single connection (channel, server, group)
+	// Leave(ctx context.Context, targets []string) error // Leaves a single connection (channel, server, group)
 
 	// Ops/Diagnostics
 	Health(ctx context.Context) HealthStatus // Returns the current health statate of an adapter

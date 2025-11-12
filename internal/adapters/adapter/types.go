@@ -9,7 +9,7 @@ type Envelope struct {
 	ChannelName string
 	ChannelID   string
 	Command     string
-	Content     string
+	Content     []string
 	Timestamp   time.Time
 
 	// Implement real time stamping
@@ -39,6 +39,15 @@ type Response struct {
 
 	Success bool
 	Error   bool
+}
+
+type SystemEvent struct {
+	Username     string
+	UserID       string
+	ChannelName  string
+	ChannelID    string
+	Setting      string
+	SettingValue string
 }
 
 type HealthStatus struct {

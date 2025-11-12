@@ -5,14 +5,15 @@ import (
 	"time"
 
 	"github.com/lsariol/botsuite/internal/adapters/adapter"
-	"github.com/lsariol/botsuite/internal/app"
+	"github.com/lsariol/botsuite/internal/app/dependencies"
 )
 
 type Command interface {
 	Name() string
 	Aliases() []string
+	TriggerPhrases() []string
 	Description() string
 	Usage() string
 	Timeout() time.Duration
-	Execute(ctx context.Context, e adapter.Envelope, deps *app.Deps) (adapter.Response, error)
+	Execute(ctx context.Context, e adapter.Envelope, deps *dependencies.Deps) (adapter.Response, error)
 }

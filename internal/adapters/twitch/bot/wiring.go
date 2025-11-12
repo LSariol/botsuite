@@ -1,0 +1,43 @@
+package bot
+
+import (
+	"context"
+	"fmt"
+)
+
+func (c *TwitchClient) Initilize(ctx context.Context) error {
+
+	if err := c.loadPerChannelSettings(ctx); err != nil {
+		return fmt.Errorf("load channels: %w", err)
+	}
+
+	if err := c.Auth.Initilize(ctx); err != nil {
+		return fmt.Errorf("initilize auth: %w", err)
+	}
+
+	if err := c.Auth.RefreshUserAccessToken(ctx); err != nil {
+		return fmt.Errorf("refresh app tokens: %w", err)
+	}
+
+	if err := c.Chat.Initilize(); err != nil {
+		return fmt.Errorf("initilize chat: %w", err)
+	}
+
+	if err := c.EventSub.Initilize(ctx); err != nil {
+		return fmt.Errorf("initilize eventsub: %w", err)
+	}
+
+	return nil
+}
+
+func (c *TwitchClient) loadPerChannelSettings(ctx context.Context) error {
+
+	channelSettings, err := c.DB.GetPerChannelSettings(ctx)
+	if err != nil {
+		return fmt.Errorf("get perchannelsettings: %w", err)
+	}
+
+	c.ChannelSettings = channelSettings
+
+	return nil
+}

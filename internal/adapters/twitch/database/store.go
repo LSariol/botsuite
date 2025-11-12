@@ -13,3 +13,7 @@ func NewStore(p *pgxpool.Pool, c string) *Store {
 		connectionString: c,
 	}
 }
+
+func (d *Store) Shutdown() error {
+	return nil
+}

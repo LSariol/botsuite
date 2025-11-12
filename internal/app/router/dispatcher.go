@@ -5,12 +5,12 @@ import (
 	"time"
 
 	"github.com/lsariol/botsuite/internal/adapters/adapter"
-	"github.com/lsariol/botsuite/internal/app"
+	"github.com/lsariol/botsuite/internal/app/dependencies"
 	"github.com/lsariol/botsuite/internal/app/middleware"
 	"github.com/lsariol/botsuite/internal/commands"
 )
 
-func Dispatch(parentCtx context.Context, envelope adapter.Envelope, cmd commands.Command, deps *app.Deps) adapter.Response {
+func (r *Router) Dispatch(parentCtx context.Context, envelope adapter.Envelope, cmd commands.Command, deps *dependencies.Deps) {
 
 	ctx := parentCtx
 
@@ -39,11 +39,12 @@ func Dispatch(parentCtx context.Context, envelope adapter.Envelope, cmd commands
 	if err != nil {
 		response.Error = true
 		response.Success = false
-		return response
+		r.adapterRegistry[response.Platform].DeliverResponse(response)
 	}
 
 	response.Success = true
-	return response
+
+	r.adapterRegistry[response.Platform].DeliverResponse(response)
 
 }
 

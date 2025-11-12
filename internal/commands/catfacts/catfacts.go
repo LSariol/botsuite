@@ -9,13 +9,14 @@ import (
 	"time"
 
 	"github.com/lsariol/botsuite/internal/adapters/adapter"
-	"github.com/lsariol/botsuite/internal/app"
+	"github.com/lsariol/botsuite/internal/app/dependencies"
 )
 
 type CatFact struct{}
 
-func (CatFact) Name() string      { return "!catfact" }
-func (CatFact) Aliases() []string { return nil }
+func (CatFact) Name() string             { return "catfact" }
+func (CatFact) Aliases() []string        { return nil }
+func (CatFact) TriggerPhrases() []string { return nil }
 func (CatFact) Description() string {
 	return "Gives you a random catfact fetched from https://catfact.ninja"
 }
@@ -23,7 +24,7 @@ func (CatFact) Usage() string          { return "!catfact" }
 func (CatFact) Timeout() time.Duration { return 20 * time.Second }
 
 // Returns a single catfact with max length set to 150
-func (CatFact) Execute(ctx context.Context, e adapter.Envelope, deps *app.Deps) (adapter.Response, error) {
+func (CatFact) Execute(ctx context.Context, e adapter.Envelope, deps *dependencies.Deps) (adapter.Response, error) {
 
 	type catfact struct {
 		Fact   string `json:"fact"`
