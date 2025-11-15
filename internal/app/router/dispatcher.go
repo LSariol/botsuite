@@ -36,14 +36,17 @@ func (r *Router) Dispatch(parentCtx context.Context, envelope adapter.Envelope, 
 	response.TimeStart = envelope.Timestamp
 	response.TimeFinished = time.Now()
 
+	if response.SuppressReply {
+		return
+	}
+
 	if err != nil {
 		response.Error = true
-		response.Success = false
 		r.adapterRegistry[response.Platform].DeliverResponse(response)
+		return
 	}
 
 	response.Success = true
-
 	r.adapterRegistry[response.Platform].DeliverResponse(response)
 
 }

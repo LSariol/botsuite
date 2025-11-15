@@ -11,12 +11,12 @@ import (
 
 type UpTime struct{}
 
-func (UpTime) Name() string             { return "uptime" }
-func (UpTime) Aliases() []string        { return nil }
-func (UpTime) TriggerPhrases() []string { return nil }
-func (UpTime) Description() string      { return "Latency check." }
-func (UpTime) Usage() string            { return "!ping" }
-func (UpTime) Timeout() time.Duration   { return 3 * time.Second }
+func (UpTime) Name() string           { return "uptime" }
+func (UpTime) Aliases() []string      { return nil }
+func (UpTime) Regexes() []string      { return nil }
+func (UpTime) Description() string    { return "Latency check." }
+func (UpTime) Usage() string          { return "!ping" }
+func (UpTime) Timeout() time.Duration { return 3 * time.Second }
 
 func (UpTime) Execute(ctx context.Context, e adapter.Envelope, deps *dependencies.Deps) (adapter.Response, error) {
 

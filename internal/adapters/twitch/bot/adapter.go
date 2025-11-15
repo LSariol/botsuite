@@ -11,6 +11,7 @@ import (
 	"github.com/lsariol/botsuite/internal/adapters/twitch/chat"
 	twitchdb "github.com/lsariol/botsuite/internal/adapters/twitch/database"
 	"github.com/lsariol/botsuite/internal/adapters/twitch/eventsub"
+	"github.com/lsariol/botsuite/internal/app/registry"
 	"github.com/lsariol/botsuite/internal/config"
 )
 
@@ -24,7 +25,7 @@ type TwitchClient struct {
 	DB              *twitchdb.Store
 	HTTP            *http.Client
 	ChannelSettings map[string]twitchdb.TwitchChannelSettings
-	Commands        map[string]string
+	CommandRegistry *registry.ReadRegister
 
 	// systemEvents is owned by BotClient.
 	// Subcomponents receive only write access to this channel to report internal changes
@@ -37,7 +38,7 @@ type TwitchClient struct {
 	inEnvelopes  chan<- adapter.Response
 }
 
-func New(http *http.Client, cfg *config.TwitchConfig, dbStore *twitchdb.Store, routerSink chan<- adapter.Envelope, cmds map[string]string) *TwitchClient {
+func New(http *http.Client, cfg *config.TwitchConfig, dbStore *twitchdb.Store, routerSink chan<- adapter.Envelope, rReg *registry.ReadRegister) *TwitchClient {
 
 	auth := auth.New(dbStore, cfg, http)
 	es := eventsub.New(http, cfg, auth, dbStore)
@@ -51,7 +52,7 @@ func New(http *http.Client, cfg *config.TwitchConfig, dbStore *twitchdb.Store, r
 		DB:              dbStore,
 		HTTP:            http,
 		ChannelSettings: make(map[string]twitchdb.TwitchChannelSettings),
-		Commands:        cmds,
+		CommandRegistry: rReg,
 		inEvents:        es.OutboundEvents(),
 		inEnvelopes:     c.InboundResponses(),
 		outEnvelopes:    routerSink,

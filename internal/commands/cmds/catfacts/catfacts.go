@@ -14,9 +14,9 @@ import (
 
 type CatFact struct{}
 
-func (CatFact) Name() string             { return "catfact" }
-func (CatFact) Aliases() []string        { return nil }
-func (CatFact) TriggerPhrases() []string { return nil }
+func (CatFact) Name() string      { return "catfact" }
+func (CatFact) Aliases() []string { return nil }
+func (CatFact) Regexes() []string { return nil }
 func (CatFact) Description() string {
 	return "Gives you a random catfact fetched from https://catfact.ninja"
 }

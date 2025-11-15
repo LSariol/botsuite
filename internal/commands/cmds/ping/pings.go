@@ -11,12 +11,12 @@ import (
 
 type Ping struct{}
 
-func (Ping) Name() string             { return "ping" }
-func (Ping) Aliases() []string        { return nil }
-func (Ping) TriggerPhrases() []string { return nil }
-func (Ping) Description() string      { return "Latency check." }
-func (Ping) Usage() string            { return "!ping" }
-func (Ping) Timeout() time.Duration   { return 3 * time.Second }
+func (Ping) Name() string           { return "ping" }
+func (Ping) Aliases() []string      { return nil }
+func (Ping) Regexes() []string      { return nil }
+func (Ping) Description() string    { return "Latency check." }
+func (Ping) Usage() string          { return "!ping" }
+func (Ping) Timeout() time.Duration { return 3 * time.Second }
 
 func (Ping) Execute(ctx context.Context, e adapter.Envelope, deps *dependencies.Deps) (adapter.Response, error) {
 

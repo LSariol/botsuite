@@ -11,6 +11,10 @@ import (
 
 func (c *EventSubClient) JoinAllChannels(ctx context.Context) error {
 
+	if err := c.Auth.RefreshUserAccessToken(ctx); err != nil {
+		return fmt.Errorf("refresh user access token: %w", err)
+	}
+
 	for _, channel := range c.Channels {
 
 		body := map[string]any{

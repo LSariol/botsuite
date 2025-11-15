@@ -1,6 +1,7 @@
 package dependencies
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"time"
@@ -14,11 +15,14 @@ type Deps struct {
 	HTTP     *http.Client
 	Logger   string
 	DB       *database.Database
+	CTX      context.Context
 	BootTime time.Time
 }
 
-func New() *Deps {
-	return &Deps{}
+func New(ctx context.Context) *Deps {
+	return &Deps{
+		CTX: ctx,
+	}
 }
 
 func (d *Deps) Load() error {

@@ -11,7 +11,7 @@ import (
 type Command interface {
 	Name() string
 	Aliases() []string
-	TriggerPhrases() []string
+	Regexes() []string
 	Description() string
 	Usage() string
 	Timeout() time.Duration

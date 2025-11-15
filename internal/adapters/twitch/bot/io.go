@@ -40,12 +40,12 @@ func (c *TwitchClient) pack(msg eventsub.EventSubMessage) {
 
 	m := msg.Payload.Event.Message.Text
 	prefix := c.ChannelSettings[msg.Payload.Event.BroadcasterUserID].CommandPrefix
-	cmd, args, ok := c.parseCMD(m, prefix)
+	var newEnvelope adapter.Envelope
+	cmd, args, reg, ok := c.parseCMD(m, prefix)
 	if !ok {
 		return
 	}
 
-	var newEnvelope adapter.Envelope
 	rawTime, _ := time.Parse(time.RFC3339Nano, msg.Metadata.MessageTimestamp)
 	newEnvelope.Platform = "twitch"
 	newEnvelope.Username = msg.Payload.Event.ChatterUserName
@@ -53,50 +53,49 @@ func (c *TwitchClient) pack(msg eventsub.EventSubMessage) {
 	newEnvelope.ChannelName = msg.Payload.Event.BroadcasterUserName
 	newEnvelope.ChannelID = msg.Payload.Event.BroadcasterUserID
 	newEnvelope.Command = strings.ToLower(cmd)
-	newEnvelope.Content = args
+	newEnvelope.Args = args
 	newEnvelope.Timestamp = rawTime
-
+	newEnvelope.RawMessage = fmt.Sprintf("%s:%s-%s", msg.Payload.Event.BroadcasterUserName, msg.Payload.Event.ChatterUserName, msg.Payload.Event.Message.Text)
+	newEnvelope.IsRegex = reg
 	c.outEnvelopes <- newEnvelope
 }
 
-func (c *TwitchClient) parseCMD(msg string, prefix string) (string, []string, bool) {
+func (c *TwitchClient) parseCMD(msg string, prefix string) (cmd string, args []string, isRegex bool, ok bool) {
 
-	msg = strings.TrimSpace(msg)
+	m := strings.TrimSpace(msg)
 
-	if strings.HasPrefix(msg, prefix) {
-		withoutPrefix := strings.TrimPrefix(strings.ToLower(msg), prefix)
-		for cmd, kind := range c.Commands {
-			if kind == "cmd" && strings.HasPrefix(withoutPrefix, cmd) {
-				if len(withoutPrefix) == len(cmd) || withoutPrefix[len(cmd)] == ' ' {
-					remainder := strings.TrimSpace(withoutPrefix[len(cmd):])
-					if remainder != "" {
-						args := strings.Fields(remainder)
-						return cmd, args, true
-					}
-					return cmd, nil, true
-				}
-			}
+	if strings.HasPrefix(m, prefix) {
+		withoutPrefix := strings.TrimSpace(m[len(prefix):])
+
+		fields := strings.Fields(withoutPrefix)
+		if len(fields) == 0 {
+			return "", nil, false, false
+		}
+
+		cmdName := strings.ToLower(fields[0])
+		cmd, ok := c.CommandRegistry.PrefixMap[cmdName]
+		if !ok {
+			return "", nil, false, false
+		}
+
+		args := fields[1:]
+		return cmd, args, false, true
+	}
+
+	for regex, cmd := range c.CommandRegistry.RegexMap {
+		if matches := regex.FindStringSubmatch(msg); matches != nil {
+			return cmd, matches[1:], true, true
 		}
 	}
 
-	for cmd, kind := range c.Commands {
-		if kind == "trigger" && strings.HasPrefix(strings.ToLower(msg), cmd) {
-			remainder := strings.TrimSpace(msg[len(cmd):])
-			if remainder != "" {
-				args := strings.Fields(remainder)
-				return cmd, args, true
-			}
-			return cmd, nil, true
-		}
-	}
-	return "", nil, false
+	return "", nil, false, false
 }
 
 func (c *TwitchClient) printE(e eventsub.EventSubMessage) {
 
 	now := timestamp()
 
-	log.Printf("[%s] %-10.10s: @%-10.10s - %s",
+	fmt.Printf("[%s] %-10.10s: @%-10.10s - %s\n",
 		now,                                 // formatted as YYYY-MM-DD-HH-MM-SS-msms
 		e.Payload.Event.BroadcasterUserName, // max width 10 chars, padded right
 		e.Payload.Event.ChatterUserName,     // max width 10 chars, padded right

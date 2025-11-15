@@ -18,16 +18,15 @@ import (
 func main() {
 
 	// Create Dependencies
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
 
-	deps := dependencies.New()
+	deps := dependencies.New(ctx)
 
 	err := deps.Load()
 	if err != nil {
 		log.Fatal("Error loading deps %w")
 	}
-
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer stop()
 
 	// Create Database Connection
 	if err := deps.DB.Connect(ctx); err != nil {
@@ -43,7 +42,7 @@ func main() {
 
 	// Create TwitchClient
 	var twitchDBStore *twitchdb.Store = twitchdb.NewStore(deps.DB.Pool, deps.DB.ConnString)
-	var twitchClient *twitchbot.TwitchClient = twitchbot.New(deps.HTTP, &deps.Config.Twitch, twitchDBStore, router.Inbound(), register.GetReadMap())
+	var twitchClient *twitchbot.TwitchClient = twitchbot.New(deps.HTTP, &deps.Config.Twitch, twitchDBStore, router.Inbound(), register.GetReadRegistry())
 
 	// // Start Threads
 

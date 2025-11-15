@@ -9,8 +9,10 @@ type Envelope struct {
 	ChannelName string
 	ChannelID   string
 	Command     string
-	Content     []string
+	Args        []string
 	Timestamp   time.Time
+	RawMessage  string
+	IsRegex     bool
 
 	// Implement real time stamping
 	// Ingress_ts        string
@@ -24,7 +26,8 @@ type Response struct {
 	UserID      string
 	ChannelName string
 	ChannelID   string
-	Text        string
+	//Leaving text field empty will result in no response back to the adapter
+	Text string
 
 	//Temp timestamps
 	TimeStart    time.Time
@@ -39,6 +42,8 @@ type Response struct {
 
 	Success bool
 	Error   bool
+	// If send reply is false, we do not send back to the adapter.
+	SuppressReply bool
 }
 
 type SystemEvent struct {

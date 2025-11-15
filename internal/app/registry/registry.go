@@ -1,53 +1,42 @@
 package registry
 
 import (
-	"fmt"
+	"regexp"
 
 	"github.com/lsariol/botsuite/internal/commands"
 )
 
 type Registry struct {
-	commands map[string]commands.Command
-	readOnly map[string]string
+	// cmdName to Registry Command
+	masterRegistry map[string]*RegistryCommand
+
+	//Read Only maps
+	ReadRegistry ReadRegister
 }
 
 func NewRegistry() *Registry {
+
+	rr := ReadRegister{
+		PrefixMap: make(map[string]string),
+		RegexMap:  make(map[*regexp.Regexp]string),
+	}
+
 	return &Registry{
-		commands: make(map[string]commands.Command),
-		readOnly: make(map[string]string),
-	}
-}
-
-func (r *Registry) Register(cmd commands.Command) {
-
-	//Creating a helper function called add
-	add := func(k string, t string) {
-		if _, exists := r.commands[k]; exists {
-			panic(fmt.Sprintf("duplicate command registration %s", k))
-		}
-
-		r.commands[k] = cmd
-		r.readOnly[k] = t
-	}
-
-	add(cmd.Name(), "cmd")
-	for _, a := range cmd.Aliases() {
-		add(a, "cmd")
-	}
-
-	for _, t := range cmd.TriggerPhrases() {
-		add(t, "trigger")
+		masterRegistry: make(map[string]*RegistryCommand),
+		ReadRegistry:   rr,
 	}
 }
 
 func (r *Registry) Get(name string) (commands.Command, bool) {
 
-	c, ok := r.commands[name]
+	rCmd, ok := r.masterRegistry[name]
+	if !ok {
+		return nil, ok
+	}
 
-	return c, ok
+	return rCmd.Cmd, true
 }
 
-func (r *Registry) GetReadMap() map[string]string {
-
-	return r.readOnly
+func (r *Registry) GetReadRegistry() *ReadRegister {
+	return &r.ReadRegistry
 }

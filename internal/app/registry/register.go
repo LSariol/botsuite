@@ -1,13 +1,17 @@
 package registry
 
 import (
-	"github.com/lsariol/botsuite/internal/commands/catfacts"
-	"github.com/lsariol/botsuite/internal/commands/help"
-	"github.com/lsariol/botsuite/internal/commands/oneuppuzzle"
-	"github.com/lsariol/botsuite/internal/commands/ping"
-	"github.com/lsariol/botsuite/internal/commands/randomdog"
-	"github.com/lsariol/botsuite/internal/commands/request"
-	"github.com/lsariol/botsuite/internal/commands/uptime"
+	"fmt"
+	"regexp"
+
+	"github.com/lsariol/botsuite/internal/commands"
+	"github.com/lsariol/botsuite/internal/commands/cmds/catfacts"
+	"github.com/lsariol/botsuite/internal/commands/cmds/help"
+	"github.com/lsariol/botsuite/internal/commands/cmds/oneuppuzzle"
+	"github.com/lsariol/botsuite/internal/commands/cmds/ping"
+	"github.com/lsariol/botsuite/internal/commands/cmds/randomdog"
+	"github.com/lsariol/botsuite/internal/commands/cmds/request"
+	"github.com/lsariol/botsuite/internal/commands/cmds/uptime"
 )
 
 // Register all functions into the registry
@@ -21,4 +25,50 @@ func RegisterAll(r *Registry) {
 	r.Register(uptime.UpTime{})
 	r.Register(oneuppuzzle.OneUpPuzzle{})
 
+}
+
+// Register a single command into the registry
+func (r *Registry) Register(command commands.Command) {
+
+	//Creating a helper function called add
+	add := func(k string, c *RegistryCommand) {
+
+		if _, exists := r.masterRegistry[k]; exists {
+			panic(fmt.Sprintf("duplicate command registration %s", k))
+		}
+
+		r.ReadRegistry.PrefixMap[k] = k
+		r.masterRegistry[k] = c
+
+		for _, p := range c.Aliases {
+			r.ReadRegistry.PrefixMap[p] = k
+			r.masterRegistry[p] = c
+		}
+
+		for _, e := range c.Regexes {
+			r.ReadRegistry.RegexMap[e] = k
+		}
+	}
+
+	rCMD := r.buildCommand(command)
+	add(command.Name(), rCMD)
+}
+
+func (r *Registry) buildCommand(c commands.Command) *RegistryCommand {
+
+	var expressions []*regexp.Regexp
+	for _, v := range c.Regexes() {
+		expression := regexp.MustCompile(v)
+
+		expressions = append(expressions, expression)
+	}
+
+	cmd := RegistryCommand{
+		Name:    c.Name(),
+		Aliases: c.Aliases(),
+		Regexes: expressions,
+		Cmd:     c,
+	}
+
+	return &cmd
 }
