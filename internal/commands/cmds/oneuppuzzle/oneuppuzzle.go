@@ -77,7 +77,7 @@ func (OneUpPuzzle) Execute(ctx context.Context, e adapter.Envelope, deps *depend
 					return adapter.Response{Text: "This channel does not have any tracked games."}, nil
 				}
 
-				return adapter.Response{Text: fmt.Sprintf("Channel Stats: Total Games %d | Average %.2fs | Fastest Game %ds (%s) | Slowest Game %ds (%s)", *cp.GamesCompleted, *cp.Completions.AverageTime, *cp.Completions.FastestTime, *cp.FastestUser, *cp.Completions.SlowestTime, *cp.SlowestUser)}, nil
+				return adapter.Response{Text: fmt.Sprintf("Channel Stats: Total Games %d | Average %s | Fastest Game %s (%s) | Slowest Game %s (%s)", *cp.GamesCompleted, formatTime(*cp.Completions.AverageTime), formatTime(*cp.Completions.FastestTime), *cp.FastestUser, formatTime(*cp.Completions.SlowestTime), *cp.SlowestUser)}, nil
 
 			case len(e.Args) == 2:
 
@@ -90,7 +90,7 @@ func (OneUpPuzzle) Execute(ctx context.Context, e adapter.Envelope, deps *depend
 					return adapter.Response{Text: "This user does not have any tracked games."}, nil
 				}
 
-				return adapter.Response{Text: fmt.Sprintf("Stats for @%s: Total Games %d | Average  %.2fs | Fastest Game %ds | Slowest Game %ds", e.Args[1], *up.GamesCompleted, *up.Completions.AverageTime, *up.Completions.FastestTime, *up.Completions.SlowestTime)}, nil
+				return adapter.Response{Text: fmt.Sprintf("Stats for @%s: Total Games %d | Average  %s | Fastest Game %s | Slowest Game %s", e.Args[1], *up.GamesCompleted, formatTime(*up.Completions.AverageTime), formatTime(*up.Completions.FastestTime), formatTime(*up.Completions.SlowestTime))}, nil
 			}
 
 			// return stats from the bot
@@ -129,4 +129,21 @@ func validateGameEntry(e adapter.Envelope, deps *dependencies.Deps) (OneUpGame, 
 	}
 
 	return newGame, nil
+}
+
+func formatTime(seconds int) string {
+
+	h := seconds / 3600
+	m := (seconds % 3600) / 60
+	s := seconds % 60
+
+	if h == 0 {
+		if m == 0 {
+			return fmt.Sprintf("%d seconds", s)
+		}
+		return fmt.Sprintf("%d minutes, %d seconds", m, s)
+	}
+
+	return fmt.Sprintf("%d hours, %d minutes, %d seconds", h, m, s)
+
 }

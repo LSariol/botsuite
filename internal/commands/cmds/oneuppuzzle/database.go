@@ -47,10 +47,10 @@ func getChannelStats(channelID string, deps *dependencies.Deps) (ChannelProfile,
 	query := `
 	SELECT
 		-- stats
-		COUNT(*)                                 AS total_games,
-		MIN((details->>'time_seconds')::int)     AS fastest_time,
-		MAX((details->>'time_seconds')::int)     AS slowest_time,
-		AVG((details->>'time_seconds')::int)     AS avg_time,
+		COUNT(*)                                 			AS total_games,
+		MIN((details->>'time_seconds')::int)     			AS fastest_time,
+		MAX((details->>'time_seconds')::int)     			AS slowest_time,
+		CAST(AVG((details->>'time_seconds')::int) AS int)	AS avg_time,
 
 		-- fastest username
 		(
@@ -104,10 +104,10 @@ func getUserStats(username string, deps *dependencies.Deps) (UserProfile, bool, 
 
 	query := `
 	SELECT
-		COUNT(*)                                 AS total_games,
-		MIN((details->>'time_seconds')::int)     AS fastest,
-		MAX((details->>'time_seconds')::int)     AS slowest,
-		AVG((details->>'time_seconds')::int)     AS avg_time
+		COUNT(*)                                 			AS total_games,
+		MIN((details->>'time_seconds')::int)     			AS fastest,
+		MAX((details->>'time_seconds')::int)     			AS slowest,
+		CAST(AVG((details->>'time_seconds')::int) AS int)	AS avg_time
 	FROM botsuite.game_events
 	WHERE username  = $1
 	AND game_code = 'oneuppuzzle'

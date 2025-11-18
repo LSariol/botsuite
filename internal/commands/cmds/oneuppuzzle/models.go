@@ -47,5 +47,5 @@ type BotProfile struct {
 type Completions struct {
 	FastestTime *int
 	SlowestTime *int
-	AverageTime *float64
+	AverageTime *int
 }
