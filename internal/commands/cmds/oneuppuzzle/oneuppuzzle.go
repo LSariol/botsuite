@@ -24,7 +24,7 @@ func (OneUpPuzzle) Execute(ctx context.Context, e adapter.Envelope, deps *depend
 
 	if e.IsRegex {
 		//store in DB
-		game, err := validateGameEntry(e, deps)
+		game, err := validateGameEntry(ctx, e, deps)
 		if err != nil {
 			return adapter.Response{SuppressReply: true, Error: true}, err
 		}
@@ -68,7 +68,7 @@ func (OneUpPuzzle) Execute(ctx context.Context, e adapter.Envelope, deps *depend
 
 			switch {
 			case len(e.Args) == 1:
-				cp, ok, err := getChannelStats(e.ChannelID, deps)
+				cp, ok, err := getChannelStats(ctx, e.ChannelID, deps)
 				if err != nil {
 					return adapter.Response{Text: "An error occured while fetching channel stats. Please try again."}, nil
 				}
@@ -81,7 +81,7 @@ func (OneUpPuzzle) Execute(ctx context.Context, e adapter.Envelope, deps *depend
 
 			case len(e.Args) == 2:
 
-				up, ok, err := getUserStats(e.Args[1], deps)
+				up, ok, err := getUserStats(ctx, e.Args[1], deps)
 				if err != nil {
 					return adapter.Response{Text: "An error occured while fetching user stats. Please try again."}, nil
 				}
@@ -108,7 +108,7 @@ func (OneUpPuzzle) Execute(ctx context.Context, e adapter.Envelope, deps *depend
 	return adapter.Response{Text: "Im not even sure how you managed to input a command to get here... but you did. "}, nil
 }
 
-func validateGameEntry(e adapter.Envelope, deps *dependencies.Deps) (OneUpGame, error) {
+func validateGameEntry(ctx context.Context, e adapter.Envelope, deps *dependencies.Deps) (OneUpGame, error) {
 
 	// Attempt to parse the game entry. If Error in parsing, its invalid
 	newGame, err := packageGame(e)
@@ -119,7 +119,7 @@ func validateGameEntry(e adapter.Envelope, deps *dependencies.Deps) (OneUpGame, 
 	//Need some kind of check here to see if the game is the correct numbered game.
 
 	// Validate the game ID as well as if the user has sumbitted this before
-	recorded, err := isPuzzleRecorded(e.UserID, newGame.Details.PuzzleID, deps)
+	recorded, err := isPuzzleRecorded(ctx, e.UserID, newGame.Details.PuzzleID, deps)
 	if err != nil {
 		return newGame, fmt.Errorf("ispuzzlerecorded: %w", err)
 	}

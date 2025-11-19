@@ -1,6 +1,7 @@
 package oneuppuzzle
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 
@@ -41,7 +42,7 @@ func storeFlaggedGame(game OneUpGame, deps *dependencies.Deps) error {
 	return nil
 }
 
-func getChannelStats(channelID string, deps *dependencies.Deps) (ChannelProfile, bool, error) {
+func getChannelStats(ctx context.Context, channelID string, deps *dependencies.Deps) (ChannelProfile, bool, error) {
 	var channelProfile ChannelProfile
 
 	query := `
@@ -79,7 +80,7 @@ func getChannelStats(channelID string, deps *dependencies.Deps) (ChannelProfile,
 	AND game_code  = 'oneuppuzzle'
 	AND is_flagged = FALSE;
 	`
-	err := deps.DB.Pool.QueryRow(deps.CTX, query, channelID).Scan(
+	err := deps.DB.Pool.QueryRow(ctx, query, channelID).Scan(
 		&channelProfile.GamesCompleted,
 		&channelProfile.Completions.FastestTime,
 		&channelProfile.Completions.SlowestTime,
@@ -99,7 +100,7 @@ func getChannelStats(channelID string, deps *dependencies.Deps) (ChannelProfile,
 	return channelProfile, true, nil
 }
 
-func getUserStats(username string, deps *dependencies.Deps) (UserProfile, bool, error) {
+func getUserStats(ctx context.Context, username string, deps *dependencies.Deps) (UserProfile, bool, error) {
 	var userProfile UserProfile
 
 	query := `
@@ -114,7 +115,7 @@ func getUserStats(username string, deps *dependencies.Deps) (UserProfile, bool, 
 	AND is_flagged = FALSE;
 	`
 
-	err := deps.DB.Pool.QueryRow(deps.CTX, query, username).Scan(
+	err := deps.DB.Pool.QueryRow(ctx, query, username).Scan(
 		&userProfile.GamesCompleted,
 		&userProfile.Completions.FastestTime,
 		&userProfile.Completions.SlowestTime,
@@ -137,7 +138,7 @@ func getLeaders(channelID string) error {
 	return nil
 }
 
-func isPuzzleRecorded(userID string, gameID int, deps *dependencies.Deps) (bool, error) {
+func isPuzzleRecorded(ctx context.Context, userID string, gameID int, deps *dependencies.Deps) (bool, error) {
 	var recorded bool = false
 
 	query := `
@@ -151,7 +152,7 @@ func isPuzzleRecorded(userID string, gameID int, deps *dependencies.Deps) (bool,
 		);
 	`
 
-	err := deps.DB.Pool.QueryRow(deps.CTX, query, userID, gameID).Scan(&recorded)
+	err := deps.DB.Pool.QueryRow(ctx, query, userID, gameID).Scan(&recorded)
 	if err != nil {
 		return false, fmt.Errorf("query row: %w", err)
 	}
