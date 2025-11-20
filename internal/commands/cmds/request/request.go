@@ -109,7 +109,7 @@ func getHandler(ctx context.Context, mode string, limit int, deps *dependencies.
 
 		var requests string
 		for _, i := range reqs {
-			requests += fmt.Sprintf("[%d] %s: %s\n", i.ID, i.UserID, i.Body)
+			requests += fmt.Sprintf("[%d] %s: %s\n", i.ID, i.Username, i.Body)
 		}
 
 		if requests == "" {
