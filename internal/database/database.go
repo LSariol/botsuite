@@ -7,24 +7,24 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/lsariol/botsuite/internal/config"
 )
 
 type Database struct {
-	Pool       *pgxpool.Pool
-	ConnString string
+	Pool   *pgxpool.Pool
+	Config *config.DatabaseConfig
 }
 
-func NewDatabase() *Database {
+func NewDatabase(c *config.DatabaseConfig) *Database {
 
 	return &Database{
-		ConnString: os.Getenv("BOTSUITE_DATABASE_URL"),
+		Config: c,
 	}
 }
 
 func (d *Database) Connect(ctx context.Context) error {
 
-	connString := fmt.Sprintf(d.ConnString, os.Getenv("BOTSUITE_DATABASE_USERNAME"), os.Getenv("BOTSUITE_DATABASE_PASSWORD"), os.Getenv("BOTSUITE_DATABASE_NAME"))
-	pool, err := pgxpool.New(ctx, connString)
+	pool, err := pgxpool.New(ctx, d.Config.ConnectionString)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Unable to connect to database: %v\n", err)
 		os.Exit(1)
@@ -38,7 +38,6 @@ func (d *Database) Connect(ctx context.Context) error {
 	}
 
 	d.Pool = pool
-	d.ConnString = connString
 	return nil
 }
 

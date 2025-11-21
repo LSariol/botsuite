@@ -23,9 +23,9 @@ func main() {
 
 	deps := dependencies.New(ctx)
 
-	err := deps.Load()
+	err := deps.Initilize()
 	if err != nil {
-		log.Fatal("Error loading deps %w")
+		log.Fatalf("Error loading deps: " + err.Error())
 	}
 
 	// Create Database Connection
@@ -41,8 +41,8 @@ func main() {
 	var router *router.Router = router.NewRouter(ctx, register)
 
 	// Create TwitchClient
-	var twitchDBStore *twitchdb.Store = twitchdb.NewStore(deps.DB.Pool, deps.DB.ConnString)
-	var twitchClient *twitchbot.TwitchClient = twitchbot.New(deps.HTTP, &deps.Config.Twitch, twitchDBStore, router.Inbound(), register.GetReadRegistry())
+	var twitchDBStore *twitchdb.Store = twitchdb.NewStore(deps.DB.Pool, deps.DB.Config.ConnectionString)
+	var twitchClient *twitchbot.TwitchClient = twitchbot.New(deps.HTTP, deps.Config.Twitch, deps.Cove, twitchDBStore, router.Inbound(), register.GetReadRegistry())
 
 	// // Start Threads
 

@@ -12,10 +12,10 @@ import (
 func (c *AuthClient) RefreshUserAccessToken(ctx context.Context) error {
 
 	data := url.Values{}
-	data.Set("client_id", c.Config.AppClientID)
-	data.Set("client_secret", c.Config.AppClientSecret)
+	data.Set("client_id", c.Config.App.ClientID)
+	data.Set("client_secret", c.Config.App.ClientSecret)
 	data.Set("grant_type", "refresh_token")
-	data.Set("refresh_token", c.Tokens.UserRefreshToken())
+	data.Set("refresh_token", c.Tokens.GetUserRefreshToken())
 
 	req, err := http.NewRequest("POST", "https://id.twitch.tv/oauth2/token", strings.NewReader(data.Encode()))
 	if err != nil {
@@ -44,9 +44,9 @@ func (c *AuthClient) RefreshUserAccessToken(ctx context.Context) error {
 		return fmt.Errorf("decode: StatusCode OK: Decode Error: %w", err)
 	}
 
-	c.Tokens.SetTokens(success.AccessToken, success.RefreshToken)
+	c.Tokens.SetUserAccessTokens(success.AccessToken, success.RefreshToken)
 
-	c.DB.StoreTokens(ctx, c.Tokens.UserAccessToken(), c.Tokens.UserRefreshToken())
+	c.DB.StoreUserAccessTokens(ctx, c.Tokens.GetUserAccessToken(), c.Tokens.GetUserRefreshToken())
 
 	return nil
 

@@ -7,37 +7,70 @@ import (
 )
 
 type SafeTwitchTokens struct {
-	mu     sync.RWMutex
-	tokens twitchdb.TwitchTokens
+	mu               sync.RWMutex
+	userAccessTokens twitchdb.TwitchUserAccessTokens
+	appAccessTokens  twitchdb.TwitchAppAccessToken
 }
 
-func NewSafeTwitchTokens(tok twitchdb.TwitchTokens) *SafeTwitchTokens {
+func NewSafeTwitchTokens() *SafeTwitchTokens {
 	return &SafeTwitchTokens{
-		tokens: tok,
+		userAccessTokens: twitchdb.TwitchUserAccessTokens{},
+		appAccessTokens:  twitchdb.TwitchAppAccessToken{},
 	}
 }
 
-func (s *SafeTwitchTokens) UserAccessToken() string {
+func (s *SafeTwitchTokens) GetUserAccessToken() string {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	return s.tokens.UserAccessToken
+	return s.userAccessTokens.UserAccessToken
 }
 
-func (s *SafeTwitchTokens) UserRefreshToken() string {
+func (s *SafeTwitchTokens) GetUserRefreshToken() string {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	return s.tokens.UserRefreshToken
+	return s.userAccessTokens.UserRefreshToken
 }
 
-func (s *SafeTwitchTokens) Tokens() (access, refresh string) {
+func (s *SafeTwitchTokens) GetAppAccessToken() string {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	return s.tokens.UserAccessToken, s.tokens.UserRefreshToken
+	return s.userAccessTokens.UserAccessToken
 }
 
-func (s *SafeTwitchTokens) SetTokens(access string, refresh string) {
+func (s *SafeTwitchTokens) SetUserAccessTokens(accessToken string, refreshToken string) {
 	s.mu.Lock()
-	s.tokens.UserAccessToken = access
-	s.tokens.UserRefreshToken = refresh
+	s.userAccessTokens.UserAccessToken = accessToken
+	s.userAccessTokens.UserRefreshToken = refreshToken
 	s.mu.Unlock()
 }
+
+func (s *SafeTwitchTokens) SetAppAccessTokens(appAccessToken string) {
+	s.mu.Lock()
+	s.appAccessTokens.TwitchAppAccessToken = appAccessToken
+	s.mu.Unlock()
+}
+
+// func (s *SafeTwitchTokens) UserAccessToken() string {
+// 	s.mu.RLock()
+// 	defer s.mu.RUnlock()
+// 	return s.tokens.UserAccessToken
+// }
+
+// func (s *SafeTwitchTokens) UserRefreshToken() string {
+// 	s.mu.RLock()
+// 	defer s.mu.RUnlock()
+// 	return s.tokens.UserRefreshToken
+// }
+
+// func (s *SafeTwitchTokens) Tokens() (access, refresh string) {
+// 	s.mu.RLock()
+// 	defer s.mu.RUnlock()
+// 	return s.tokens.UserAccessToken, s.tokens.UserRefreshToken
+// }
+
+// func (s *SafeTwitchTokens) SetTokens(access string, refresh string) {
+// 	s.mu.Lock()
+// 	s.tokens.UserAccessToken = access
+// 	s.tokens.UserRefreshToken = refresh
+// 	s.mu.Unlock()
+// }

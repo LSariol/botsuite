@@ -16,7 +16,11 @@ func (c *TwitchClient) Initilize(ctx context.Context) error {
 	}
 
 	if err := c.Auth.RefreshUserAccessToken(ctx); err != nil {
-		return fmt.Errorf("refresh app tokens: %w", err)
+		return fmt.Errorf("refresh user access tokens: %w", err)
+	}
+
+	if err := c.Auth.RefreshAppAccessToken(ctx); err != nil {
+		return fmt.Errorf("refresh app access tokens: %w", err)
 	}
 
 	if err := c.Chat.Initilize(); err != nil {

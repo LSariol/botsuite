@@ -22,7 +22,7 @@ func (c *EventSubClient) JoinAllChannels(ctx context.Context) error {
 			"version": "1",
 			"condition": map[string]string{
 				"broadcaster_user_id": channel.UserID,
-				"user_id":             c.Config.BotID,
+				"user_id":             c.Config.Bot.ID,
 			},
 			"transport": map[string]string{
 				"method":     "websocket",
@@ -36,8 +36,8 @@ func (c *EventSubClient) JoinAllChannels(ctx context.Context) error {
 			return fmt.Errorf("join: %w", err)
 		}
 
-		req.Header.Set("Authorization", "Bearer "+c.Auth.Tokens.UserAccessToken()) // MUST be a user token for WebSocket subs
-		req.Header.Set("Client-Id", c.Config.AppClientID)
+		req.Header.Set("Authorization", "Bearer "+c.Auth.Tokens.GetUserAccessToken()) // MUST be a user token for WebSocket subs
+		req.Header.Set("Client-Id", c.Config.App.ClientID)
 		req.Header.Set("Content-Type", "application/json")
 
 		resp, err := c.HTTP.Do(req)
@@ -76,8 +76,8 @@ func (c *EventSubClient) Leave(ctx context.Context, targets []string) error {
 			return fmt.Errorf("unsubscribe: %w", err)
 		}
 
-		req.Header.Set("Authorization", "Bearer "+c.Config.UserAccessToken) // MUST be a user token for WebSocket subs
-		req.Header.Set("Client-Id", c.Config.AppClientID)
+		req.Header.Set("Authorization", "Bearer "+c.Auth.Tokens.GetUserAccessToken()) // MUST be a user token for WebSocket subs
+		req.Header.Set("Client-Id", c.Config.App.ClientID)
 
 		resp, err := c.HTTP.Do(req)
 		if err != nil {

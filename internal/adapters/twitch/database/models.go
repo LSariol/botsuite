@@ -1,6 +1,6 @@
 package twitchdb
 
-type ChannelInsert struct {
+type AddChannelParams struct {
 	UserID       string
 	Username     string
 	AccessToken  string
@@ -15,9 +15,13 @@ type TwitchChannel struct {
 	SubscriptionID string
 }
 
-type TwitchTokens struct {
+type TwitchUserAccessTokens struct {
 	UserAccessToken  string
 	UserRefreshToken string
+}
+
+type TwitchAppAccessToken struct {
+	TwitchAppAccessToken string
 }
 
 type TwitchChannelSettings struct {

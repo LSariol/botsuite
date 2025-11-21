@@ -27,7 +27,7 @@ func (c *TwitchClient) ingestLoop(ctx context.Context, in <-chan eventsub.EventS
 			}
 
 			//Log message inbound
-			c.printE(msg)
+			c.logMessage(msg)
 			go c.pack(msg)
 
 			//Check leading words. If words are found send off
@@ -91,7 +91,7 @@ func (c *TwitchClient) parseCMD(msg string, prefix string) (cmd string, args []s
 	return "", nil, false, false
 }
 
-func (c *TwitchClient) printE(e eventsub.EventSubMessage) {
+func (c *TwitchClient) logMessage(e eventsub.EventSubMessage) {
 
 	now := timestamp()
 

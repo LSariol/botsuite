@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/lsariol/botsuite/internal/adapters/adapter"
+	"github.com/lsariol/botsuite/internal/adapters/twitch/auth"
 	twitchdb "github.com/lsariol/botsuite/internal/adapters/twitch/database"
 	"github.com/lsariol/botsuite/internal/config"
 )
@@ -26,14 +27,16 @@ const (
 
 type ChatClient struct {
 	HTTP   *http.Client
+	Auth   *auth.AuthClient
 	Config *config.TwitchConfig
 	DB     *twitchdb.Store
 	in     chan adapter.Response
 }
 
-func New(http *http.Client, cfg *config.TwitchConfig, db *twitchdb.Store) *ChatClient {
+func New(http *http.Client, cfg *config.TwitchConfig, auth *auth.AuthClient, db *twitchdb.Store) *ChatClient {
 
 	return &ChatClient{
+		Auth:   auth,
 		HTTP:   http,
 		Config: cfg,
 		DB:     db,
@@ -103,6 +106,14 @@ func (c *ChatClient) DeliverResponse(ctx context.Context, r adapter.Response) er
 		case 401:
 			log.Println("Bad/expired token, missing user:write:chat scope, client-ID mismatch")
 			log.Printf("401: %s\n", helixErr.Message)
+
+			// Refresh App Access Token
+			if err := c.Auth.RefreshAppAccessToken(ctx); err != nil {
+				return fmt.Errorf("refresh app access token: %w", err)
+			}
+			// Try again
+			log.Println("Failed to send message. App Access token has been refreshed, attempting again.")
+			return c.DeliverResponse(ctx, r)
 
 		// Not permitted to send that (banned)
 		case 403:

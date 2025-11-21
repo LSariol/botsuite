@@ -5,7 +5,7 @@ import (
 	"fmt"
 )
 
-func (s *Store) AddChannel(ctx context.Context, ch ChannelInsert) error {
+func (s *Store) AddChannel(ctx context.Context, ch AddChannelParams) error {
 	query := `
 	INSERT INTO botsuite.twitch_channels (user_id, username, access_token, refresh_token)
 	VALUES ($1, $2, $3, $4)
@@ -117,7 +117,7 @@ func (s *Store) GetPerChannelSettings(ctx context.Context) (map[string]TwitchCha
 }
 
 // Action can either be 'grant', 'revoke', 'ban', 'unban'
-func (s *Store) LogEvent(ctx context.Context, ch ChannelInsert, action string) error {
+func (s *Store) LogEvent(ctx context.Context, ch AddChannelParams, action string) error {
 	query := `
 	INSERT INTO botsuite.twitch_channel_events (user_id, username, action)
 	VALUES ($1, $2, $3)

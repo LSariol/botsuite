@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/LSariol/coveclient"
 	"github.com/lsariol/botsuite/internal/adapters/adapter"
 	"github.com/lsariol/botsuite/internal/adapters/twitch/auth"
 	"github.com/lsariol/botsuite/internal/adapters/twitch/chat"
@@ -38,11 +39,11 @@ type TwitchClient struct {
 	inEnvelopes  chan<- adapter.Response
 }
 
-func New(http *http.Client, cfg *config.TwitchConfig, dbStore *twitchdb.Store, routerSink chan<- adapter.Envelope, rReg *registry.ReadRegister) *TwitchClient {
+func New(http *http.Client, cfg *config.TwitchConfig, cove *coveclient.Client, dbStore *twitchdb.Store, routerSink chan<- adapter.Envelope, rReg *registry.ReadRegister) *TwitchClient {
 
-	auth := auth.New(dbStore, cfg, http)
+	auth := auth.New(dbStore, cove, cfg, http)
 	es := eventsub.New(http, cfg, auth, dbStore)
-	c := chat.New(http, cfg, dbStore)
+	c := chat.New(http, cfg, auth, dbStore)
 
 	return &TwitchClient{
 		Chat:            c,
