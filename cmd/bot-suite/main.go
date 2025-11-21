@@ -25,7 +25,7 @@ func main() {
 
 	err := deps.Initilize()
 	if err != nil {
-		log.Fatalf("Error loading deps: " + err.Error())
+		log.Fatalf("Error loading deps: %v", err)
 	}
 
 	// Create Database Connection

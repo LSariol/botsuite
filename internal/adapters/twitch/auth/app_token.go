@@ -49,6 +49,9 @@ func (c *AuthClient) RefreshAppAccessToken(ctx context.Context) error {
 
 	c.Tokens.SetAppAccessTokens(appAccessToken)
 	err = c.StoreAppAccessTokens(ctx, appAccessToken)
+	if err != nil {
+		return fmt.Errorf("store app access tokens: %w", err)
+	}
 
 	return nil
 }
