@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/lsariol/botsuite/internal/adapters/adapter"
 	"github.com/lsariol/botsuite/internal/adapters/twitch/auth"
@@ -81,7 +82,8 @@ func (c *ChatClient) Shutdown() error {
 
 func (c *ChatClient) DeliverResponse(ctx context.Context, r adapter.Response) error {
 
-	//check rate limits
+	//Replace this with a sophisticated rate limiter
+	time.Sleep(time.Second * 1)
 
 	msgResponse, helixErr, err := c.SendChat(ctx, r)
 	if err != nil {
@@ -113,6 +115,7 @@ func (c *ChatClient) DeliverResponse(ctx context.Context, r adapter.Response) er
 			}
 			// Try again
 			log.Println("Failed to send message. App Access token has been refreshed, attempting again.")
+
 			return c.DeliverResponse(ctx, r)
 
 		// Not permitted to send that (banned)
