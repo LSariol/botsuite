@@ -133,11 +133,12 @@ func setHandler(ctx context.Context, id int64, status string, deps *dependencies
 
 func createHandler(ctx context.Context, e adapter.Envelope, deps *dependencies.Deps) (adapter.Response, error) {
 	featureRequest := newFeatureRequest(e)
-	err := storeRequest(ctx, featureRequest, deps)
+	id, err := storeRequest(ctx, featureRequest, deps)
 	if err != nil {
 		return adapter.Response{Text: "An error occured while storing your request. Please try again."}, err
 	}
-	return adapter.Response{Text: "Your request has been saved."}, nil
+
+	return adapter.Response{Text: fmt.Sprintf("Your request has been saved (ID %d)", id)}, nil
 }
 
 func newFeatureRequest(e adapter.Envelope) FeatureRequest {

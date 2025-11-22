@@ -9,19 +9,21 @@ import (
 
 // status types can only be 'new', 'in_progress', 'completed', 'rejected'
 
-func storeRequest(ctx context.Context, featureRequest FeatureRequest, deps *dependencies.Deps) error {
+func storeRequest(ctx context.Context, featureRequest FeatureRequest, deps *dependencies.Deps) (int64, error) {
 
 	query := `
 	INSERT INTO botsuite.feature_requests (user_id, username, channel_id, channel_name, platform, body)
-	VALUES ($1, $2, $3, $4, $5, $6);
+	VALUES ($1, $2, $3, $4, $5, $6)
+	RETURNING id;
 	`
 
-	_, err := deps.DB.Pool.Exec(ctx, query, featureRequest.UserID, featureRequest.Username, featureRequest.ChannelID, featureRequest.ChannelName, featureRequest.Platform, featureRequest.Body)
+	var id int64
+	err := deps.DB.Pool.QueryRow(ctx, query, featureRequest.UserID, featureRequest.Username, featureRequest.ChannelID, featureRequest.ChannelName, featureRequest.Platform, featureRequest.Body).Scan(&id)
 	if err != nil {
-		return fmt.Errorf("exec query: %w", err)
+		return 0, fmt.Errorf("exec query: %w", err)
 	}
 
-	return nil
+	return id, nil
 }
 
 func updateStatus(ctx context.Context, newStatus string, requestID int64, deps *dependencies.Deps) error {
