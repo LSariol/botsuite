@@ -34,7 +34,7 @@ func (s *SafeTwitchTokens) GetUserRefreshToken() string {
 func (s *SafeTwitchTokens) GetAppAccessToken() string {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	return s.userAccessTokens.UserAccessToken
+	return s.appAccessTokens.TwitchAppAccessToken
 }
 
 func (s *SafeTwitchTokens) SetUserAccessTokens(accessToken string, refreshToken string) {
