@@ -2,6 +2,8 @@ package config
 
 import (
 	"fmt"
+	"os"
+	"strings"
 
 	"github.com/LSariol/coveclient"
 )
@@ -22,14 +24,16 @@ func New() *Config {
 
 func (c *Config) Initilize(cove *coveclient.Client) error {
 
-	err := c.InitilizeDatabase(cove)
+	env := strings.ToUpper(os.Getenv("APP_ENV"))
+
+	err := c.InitilizeDatabaseConfig(cove, env)
 	if err != nil {
-		return fmt.Errorf("InitilizeDatabase: %w", err)
+		return fmt.Errorf("InitilizeDatabaseConfig: %w", err)
 	}
 
-	err = c.InitilizeTwitch(cove)
+	err = c.InitilizeTwitchConfig(cove)
 	if err != nil {
-		return fmt.Errorf("InitilizeTwitch: %w", err)
+		return fmt.Errorf("InitilizeTwitchConfig: %w", err)
 	}
 
 	return nil

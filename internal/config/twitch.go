@@ -24,7 +24,7 @@ func NewTwitchConfig() *TwitchConfig {
 	return &TwitchConfig{}
 }
 
-func (c *Config) InitilizeTwitch(cove *coveclient.Client) error {
+func (c *Config) InitilizeTwitchConfig(cove *coveclient.Client) error {
 
 	clientID, err := cove.GetSecret("TWITCH_APP_CLIENT_ID")
 	if err != nil {

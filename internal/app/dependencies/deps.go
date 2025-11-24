@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/LSariol/coveclient"
@@ -33,14 +34,17 @@ func (d *Deps) Initilize() error {
 
 	cfg := config.New()
 
-	if os.Getenv("COVECLIENT_URL") == "" {
-		err := godotenv.Load("configs/.env")
-		if err != nil {
-			return fmt.Errorf("error loading .env file: %w", err)
-		}
-	}
+	_ = godotenv.Load(".env")
 
-	cove := coveclient.New(os.Getenv("COVECLIENT_URL"), os.Getenv("COVECLIENT_SECRET"))
+	env := strings.ToUpper(os.Getenv("APP_ENV"))
+	prod := env == "PROD"
+
+	var cove *coveclient.Client
+	if prod {
+		cove = coveclient.New(os.Getenv("COVE_CLIENT_URL"), os.Getenv("COVE_CLIENT_SECRET"))
+	} else {
+		cove = coveclient.New(os.Getenv("COVE_CLIENT_URL_DEV"), os.Getenv("COVE_CLIENT_SECRET_DEV"))
+	}
 
 	err := cfg.Initilize(cove)
 	if err != nil {
