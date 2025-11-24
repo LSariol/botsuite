@@ -11,6 +11,7 @@ type Envelope struct {
 	Command     string
 	Args        []string
 	Timestamp   time.Time
+	Prefix      string
 	RawMessage  string
 	IsRegex     bool
 
