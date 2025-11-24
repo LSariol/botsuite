@@ -55,6 +55,7 @@ func (c *TwitchClient) pack(msg eventsub.EventSubMessage) {
 	newEnvelope.Command = strings.ToLower(cmd)
 	newEnvelope.Args = args
 	newEnvelope.Timestamp = rawTime
+	newEnvelope.Prefix = prefix
 	newEnvelope.RawMessage = fmt.Sprintf("%s:%s-%s", msg.Payload.Event.BroadcasterUserName, msg.Payload.Event.ChatterUserName, msg.Payload.Event.Message.Text)
 	newEnvelope.IsRegex = reg
 	c.outEnvelopes <- newEnvelope
