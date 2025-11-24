@@ -83,7 +83,6 @@ func (c *ChatClient) Shutdown() error {
 func (c *ChatClient) DeliverResponse(ctx context.Context, r adapter.Response) error {
 
 	//Replace this with a sophisticated rate limiter
-	time.Sleep(time.Second * 1)
 
 	msgResponse, helixErr, err := c.SendChat(ctx, r)
 	if err != nil {
@@ -116,6 +115,7 @@ func (c *ChatClient) DeliverResponse(ctx context.Context, r adapter.Response) er
 			// Try again
 			log.Println("Failed to send message. App Access token has been refreshed, attempting again.")
 
+			time.Sleep(time.Second * 1)
 			return c.DeliverResponse(ctx, r)
 
 		// Not permitted to send that (banned)
@@ -130,5 +130,6 @@ func (c *ChatClient) DeliverResponse(ctx context.Context, r adapter.Response) er
 		}
 	}
 
+	time.Sleep(time.Second * 1)
 	return nil
 }
