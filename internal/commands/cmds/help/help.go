@@ -19,6 +19,6 @@ func (Help) Timeout() time.Duration { return 3 * time.Second }
 
 func (Help) Execute(ctx context.Context, e adapter.Envelope, deps *dependencies.Deps) (adapter.Response, error) {
 
-	return adapter.Response{Text: "Aint no help yet partner, but eventually..."}, nil
+	return adapter.Response{Text: "Ping mobasity, this isnt set up yet"}, nil
 
 }
