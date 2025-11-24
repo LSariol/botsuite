@@ -7,6 +7,7 @@ import (
 
 	"github.com/lsariol/botsuite/internal/adapters/adapter"
 	"github.com/lsariol/botsuite/internal/app/dependencies"
+	"github.com/lsariol/botsuite/internal/commands"
 )
 
 type OneUpPuzzle struct{}
@@ -26,7 +27,7 @@ func (OneUpPuzzle) Execute(ctx context.Context, e adapter.Envelope, deps *depend
 		//store in DB
 		game, err := validateGameEntry(ctx, e, deps)
 		if err != nil {
-			return adapter.Response{SuppressReply: true, Error: true}, err
+			return commands.SuppresedReply()
 		}
 
 		if 3600 <= game.Details.TimeSeconds || game.Details.TimeSeconds <= 20 {
