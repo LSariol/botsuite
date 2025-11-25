@@ -39,7 +39,14 @@ func (c *TwitchClient) ingestLoop(ctx context.Context, in <-chan eventsub.EventS
 func (c *TwitchClient) pack(msg eventsub.EventSubMessage) {
 
 	m := msg.Payload.Event.Message.Text
-	prefix := c.ChannelSettings[msg.Payload.Event.BroadcasterUserID].CommandPrefix
+
+	channelSettings, ok := c.Settings.GetTwitchChannelSettings(msg.Payload.Event.BroadcasterUserID)
+	if !ok {
+		channelSettings.CommandPrefix = "!"
+	}
+
+	prefix := channelSettings.CommandPrefix
+
 	var newEnvelope adapter.Envelope
 	cmd, args, reg, ok := c.parseCMD(m, prefix)
 	if !ok {

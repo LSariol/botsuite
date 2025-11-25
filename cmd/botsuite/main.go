@@ -9,6 +9,7 @@ import (
 
 	twitchbot "github.com/lsariol/botsuite/internal/adapters/twitch/bot"
 	twitchdb "github.com/lsariol/botsuite/internal/adapters/twitch/database"
+	"github.com/lsariol/botsuite/internal/runtime/settings"
 
 	"github.com/lsariol/botsuite/internal/app/dependencies"
 	"github.com/lsariol/botsuite/internal/app/registry"
@@ -40,14 +41,20 @@ func main() {
 	// Create Router
 	var router *router.Router = router.NewRouter(ctx, register)
 
-	// Create TwitchClient
+	// Create DBStores
 	var twitchDBStore *twitchdb.Store = twitchdb.NewStore(deps.DB.Pool, deps.DB.Config.ConnectionString)
-	var twitchClient *twitchbot.TwitchClient = twitchbot.New(deps.HTTP, deps.Config.Twitch, deps.Cove, twitchDBStore, router.Inbound(), register.GetReadRegistry())
 
-	// // Start Threads
+	// Create SettingsStore
+	var settingsStore *settings.Store = settings.NewSettings(twitchDBStore)
+
+	deps.Settings = settingsStore
+
+	//Create Adapter clients
+	var twitchClient *twitchbot.TwitchClient = twitchbot.New(deps.HTTP, deps.Config.Twitch, deps.Cove, deps.Settings, twitchDBStore, router.Inbound(), register.GetReadRegistry())
 
 	// Register Adapters with the router
 	router.RegisterAdapter(twitchClient)
+
 	// Start Router
 	go router.Run(ctx, deps)
 

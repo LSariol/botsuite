@@ -7,7 +7,7 @@ import (
 
 func (c *TwitchClient) Initilize(ctx context.Context) error {
 
-	if err := c.loadPerChannelSettings(ctx); err != nil {
+	if err := c.Settings.LoadAllTwitchChannelSettings(ctx); err != nil {
 		return fmt.Errorf("load channels: %w", err)
 	}
 
@@ -30,18 +30,6 @@ func (c *TwitchClient) Initilize(ctx context.Context) error {
 	if err := c.EventSub.Initilize(ctx); err != nil {
 		return fmt.Errorf("initilize eventsub: %w", err)
 	}
-
-	return nil
-}
-
-func (c *TwitchClient) loadPerChannelSettings(ctx context.Context) error {
-
-	channelSettings, err := c.DB.GetPerChannelSettings(ctx)
-	if err != nil {
-		return fmt.Errorf("get perchannelsettings: %w", err)
-	}
-
-	c.ChannelSettings = channelSettings
 
 	return nil
 }

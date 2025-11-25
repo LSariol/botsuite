@@ -11,6 +11,7 @@ import (
 	"github.com/lsariol/botsuite/internal/commands/cmds/ping"
 	"github.com/lsariol/botsuite/internal/commands/cmds/randomdog"
 	"github.com/lsariol/botsuite/internal/commands/cmds/request"
+	"github.com/lsariol/botsuite/internal/commands/cmds/settings"
 	"github.com/lsariol/botsuite/internal/commands/cmds/uptime"
 )
 
@@ -24,6 +25,7 @@ func RegisterAll(r *Registry) {
 	r.Register(request.Request{})
 	r.Register(uptime.UpTime{})
 	r.Register(oneuppuzzle.OneUpPuzzle{})
+	r.Register(settings.Settings{})
 
 }
 

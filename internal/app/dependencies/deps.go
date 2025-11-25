@@ -12,10 +12,12 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/lsariol/botsuite/internal/config"
 	"github.com/lsariol/botsuite/internal/database"
+	"github.com/lsariol/botsuite/internal/runtime/settings"
 )
 
 type Deps struct {
 	Config   *config.Config
+	Settings *settings.Store
 	HTTP     *http.Client
 	Logger   string
 	Cove     *coveclient.Client

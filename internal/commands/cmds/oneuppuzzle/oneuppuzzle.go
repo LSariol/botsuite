@@ -27,7 +27,7 @@ func (OneUpPuzzle) Execute(ctx context.Context, e adapter.Envelope, deps *depend
 		//store in DB
 		game, err := validateGameEntry(ctx, e, deps)
 		if err != nil {
-			return commands.SuppresedReply()
+			return commands.SuppressedReply()
 		}
 
 		if 3600 <= game.Details.TimeSeconds || game.Details.TimeSeconds <= 20 {

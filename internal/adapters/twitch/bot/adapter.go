@@ -14,6 +14,7 @@ import (
 	"github.com/lsariol/botsuite/internal/adapters/twitch/eventsub"
 	"github.com/lsariol/botsuite/internal/app/registry"
 	"github.com/lsariol/botsuite/internal/config"
+	"github.com/lsariol/botsuite/internal/runtime/settings"
 )
 
 var _ adapter.Adapter = (*TwitchClient)(nil)
@@ -23,9 +24,9 @@ type TwitchClient struct {
 	EventSub        *eventsub.EventSubClient
 	Auth            *auth.AuthClient
 	Config          *config.TwitchConfig
+	Settings        *settings.Store
 	DB              *twitchdb.Store
 	HTTP            *http.Client
-	ChannelSettings map[string]twitchdb.TwitchChannelSettings
 	CommandRegistry *registry.ReadRegister
 
 	// systemEvents is owned by BotClient.
@@ -39,21 +40,21 @@ type TwitchClient struct {
 	inEnvelopes  chan<- adapter.Response
 }
 
-func New(http *http.Client, cfg *config.TwitchConfig, cove *coveclient.Client, dbStore *twitchdb.Store, routerSink chan<- adapter.Envelope, rReg *registry.ReadRegister) *TwitchClient {
+func New(http *http.Client, cfg *config.TwitchConfig, cove *coveclient.Client, settingsStore *settings.Store, dbStore *twitchdb.Store, routerSink chan<- adapter.Envelope, rReg *registry.ReadRegister) *TwitchClient {
 
 	auth := auth.New(dbStore, cove, cfg, http)
 	es := eventsub.New(http, cfg, auth, dbStore)
 	c := chat.New(http, cfg, auth, dbStore)
 
 	return &TwitchClient{
-		Chat:            c,
-		EventSub:        es,
-		Auth:            auth,
-		Config:          cfg,
-		DB:              dbStore,
-		HTTP:            http,
-		ChannelSettings: make(map[string]twitchdb.TwitchChannelSettings),
-		CommandRegistry: rReg,
+		Chat:            c,             //Chat Client
+		EventSub:        es,            //EventSub Client
+		Auth:            auth,          //Auth Client
+		Config:          cfg,           //Config - Values that never change
+		Settings:        settingsStore, //SettingsStore - Values that are tied to the database, which need occasional updating
+		DB:              dbStore,       //Connection to twitch Database
+		HTTP:            http,          //HTTP Client
+		CommandRegistry: rReg,          //Read Register for commands
 		inEvents:        es.OutboundEvents(),
 		inEnvelopes:     c.InboundResponses(),
 		outEnvelopes:    routerSink,
