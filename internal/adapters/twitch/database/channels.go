@@ -94,7 +94,10 @@ func (s *Store) GetPerChannelSettings(ctx context.Context) (map[string]TwitchCha
 	FROM botsuite.twitch_channels AS tc
 	LEFT JOIN botsuite.twitch_settings AS ts
 	ON tc.user_id = ts.user_id
-	WHERE tc.active = TRUE;
+	WHERE 
+		tc.active = TRUE
+		AND
+		tc.banned = false;
 	`
 
 	rows, err := s.pool.Query(ctx, query)
