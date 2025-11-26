@@ -36,6 +36,17 @@ type ChannelProfile struct {
 	SlowestUser    *string
 }
 
+// Stat profile for a given gameID
+type GameProfile struct {
+	ChannelID      string
+	ChannelName    string
+	GameID         int
+	GamesCompleted *int
+	Completions    Completions
+	FastestUser    string
+	SlowestUser    string
+}
+
 // Stat profile for the entire bot across all channels.
 type BotProfile struct {
 	ChannelID      string

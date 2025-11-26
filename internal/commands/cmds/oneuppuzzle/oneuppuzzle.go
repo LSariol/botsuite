@@ -3,6 +3,7 @@ package oneuppuzzle
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/lsariol/botsuite/internal/adapters/adapter"
@@ -69,9 +70,9 @@ func (OneUpPuzzle) Execute(ctx context.Context, e adapter.Envelope, deps *depend
 
 			switch {
 			case len(e.Args) == 1:
-				cp, ok, err := getChannelStats(ctx, e.ChannelID, deps)
+				cp, ok, err := puzzleStatsByChannel(ctx, e.ChannelID, deps)
 				if err != nil {
-					return adapter.Response{Text: "An error occured while fetching channel stats. Please try again."}, nil
+					return adapter.Response{Text: "An error occured while fetching channel stats. Please try again."}, err
 				}
 
 				if !ok {
@@ -82,16 +83,55 @@ func (OneUpPuzzle) Execute(ctx context.Context, e adapter.Envelope, deps *depend
 
 			case len(e.Args) == 2:
 
-				up, ok, err := getUserStats(ctx, e.Args[1], deps)
+				id := e.Args[1]
+
+				//Decide if we are working with a puzzleID or a username
+
+				puzzleID, err := strconv.Atoi(id)
 				if err != nil {
-					return adapter.Response{Text: "An error occured while fetching user stats. Please try again."}, nil
+					if id[0] == '#' {
+
+						puzzleID, err = strconv.Atoi(id[1:])
+						if err != nil {
+							return adapter.Response{Text: "Invalid puzzle id. Must be only the number '!oneuppuzzle stats 616' or the number with a leading # '!oneuppuzzle stats #616'."}, nil
+						}
+
+						return ExecuteWithPuzzleID(ctx, puzzleID, deps)
+					}
+				} else {
+
+					return ExecuteWithPuzzleID(ctx, puzzleID, deps)
+				}
+
+				return ExecuteWithUserName(ctx, id, deps)
+
+			case len(e.Args) == 3:
+
+				potentialID := e.Args[2]
+
+				puzzleID, err := strconv.Atoi(potentialID)
+				if err != nil {
+					if potentialID[0] == '#' {
+
+						puzzleID, err = strconv.Atoi(potentialID[1:])
+						if err != nil {
+							return adapter.Response{Text: "Invalid puzzle id. Must be only the number '!oneuppuzzle stats 616' or the number with a leading # '!oneuppuzzle stats #616'."}, nil
+						}
+					}
+				}
+
+				gameProfile, ok, err := puzzleStatsByPuzzleID(ctx, puzzleID, deps)
+				if err != nil {
+					return adapter.Response{Text: fmt.Sprintf("An error occured while fetching stats for puzzle #%d. Please try again in a moment.", puzzleID)}, err
 				}
 
 				if !ok {
-					return adapter.Response{Text: "This user does not have any tracked games."}, nil
+					return adapter.Response{Text: fmt.Sprintf("There are no puzzles tracked for Puzzle #%d.", puzzleID)}, nil
 				}
 
-				return adapter.Response{Text: fmt.Sprintf("Stats for @%s: Total Games %d | Average  %s | Fastest Game %s | Slowest Game %s", e.Args[1], *up.GamesCompleted, formatTime(*up.Completions.AverageTime), formatTime(*up.Completions.FastestTime), formatTime(*up.Completions.SlowestTime))}, nil
+				return adapter.Response{Text: fmt.Sprintf("Stats for Puzzle #%d: Total Games %d | Average %s | Fastest Game %s (%s) | Slowest Game %s (%s)", gameProfile.GameID, gameProfile.GamesCompleted, formatTime(*gameProfile.Completions.AverageTime), formatTime(*gameProfile.Completions.FastestTime), gameProfile.FastestUser, formatTime(*gameProfile.Completions.SlowestTime), gameProfile.SlowestUser)}, nil
+
+			case len(e.Args) == 4:
 			}
 
 			// return stats from the bot
@@ -130,6 +170,36 @@ func validateGameEntry(ctx context.Context, e adapter.Envelope, deps *dependenci
 	}
 
 	return newGame, nil
+}
+
+func ExecuteWithPuzzleID(ctx context.Context, puzzleID int, deps *dependencies.Deps) (adapter.Response, error) {
+
+	gameProfile, ok, err := puzzleStatsByPuzzleID(ctx, puzzleID, deps)
+	if err != nil {
+		return adapter.Response{Text: fmt.Sprintf("An error occured while fetching stats for puzzle #%d. Please try again in a moment.", puzzleID)}, err
+	}
+
+	if !ok {
+		return adapter.Response{Text: fmt.Sprintf("There are no puzzles tracked for Puzzle #%d.", puzzleID)}, nil
+	}
+
+	return adapter.Response{Text: fmt.Sprintf("Stats for Puzzle #%d: Total Games %d | Average %s | Fastest Game %s (%s) | Slowest Game %s (%s)", gameProfile.GameID, *gameProfile.GamesCompleted, formatTime(*gameProfile.Completions.AverageTime), formatTime(*gameProfile.Completions.FastestTime), gameProfile.FastestUser, formatTime(*gameProfile.Completions.SlowestTime), gameProfile.SlowestUser)}, nil
+
+}
+
+func ExecuteWithUserName(ctx context.Context, username string, deps *dependencies.Deps) (adapter.Response, error) {
+
+	userProfile, ok, err := puzzleStatsByUser(ctx, username, deps)
+	if err != nil {
+		return adapter.Response{Text: "An error occured while fetching user stats. Please try again."}, nil
+	}
+
+	if !ok {
+		return adapter.Response{Text: "This user does not have any tracked games."}, nil
+	}
+
+	return adapter.Response{Text: fmt.Sprintf("Stats for @%s: Total Games %d | Average  %s | Fastest Game %s | Slowest Game %s", username, *userProfile.GamesCompleted, formatTime(*userProfile.Completions.AverageTime), formatTime(*userProfile.Completions.FastestTime), formatTime(*userProfile.Completions.SlowestTime))}, nil
+
 }
 
 func formatTime(seconds int) string {
