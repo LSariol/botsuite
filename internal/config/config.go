@@ -11,6 +11,7 @@ import (
 type Config struct {
 	Twitch   *TwitchConfig
 	Database *DatabaseConfig
+	Commands *CommandsConfig
 }
 
 // Holds never changing variables ONLY
@@ -19,6 +20,7 @@ func New() *Config {
 	return &Config{
 		Twitch:   NewTwitchConfig(),
 		Database: NewDatabaseConfig(),
+		Commands: NewCommandsConfig(),
 	}
 }
 
@@ -34,6 +36,11 @@ func (c *Config) Initilize(cove *coveclient.Client) error {
 	err = c.InitilizeTwitchConfig(cove)
 	if err != nil {
 		return fmt.Errorf("InitilizeTwitchConfig: %w", err)
+	}
+
+	err = c.InitilizeCommandsConfig(cove)
+	if err != nil {
+		return fmt.Errorf("InitilizeCommandsConfig: %w", err)
 	}
 
 	return nil
