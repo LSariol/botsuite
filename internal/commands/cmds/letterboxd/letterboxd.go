@@ -3,6 +3,7 @@ package letterboxd
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"net/url"
 	"strings"
 	"time"
@@ -53,6 +54,12 @@ func handleWatch(ctx context.Context, e adapter.Envelope, deps *dependencies.Dep
 	}
 
 	feedURL := fmt.Sprintf("https://letterboxd.com/%s/rss/", lbUsername)
+
+	resp, err := http.Head(feedURL)
+	if err != nil || resp.StatusCode == http.StatusNotFound {
+		return adapter.Response{Text: fmt.Sprintf("@%s couldn't find a Letterboxd user named \"%s\".", e.Username, lbUsername)}, nil
+	}
+
 	alertChannel := fmt.Sprintf("%s:%s", e.Platform, e.ChannelID)
 
 	if err := addSubscription(ctx, e.Username, e.UserID, lbUsername, feedURL, alertChannel, deps); err != nil {
