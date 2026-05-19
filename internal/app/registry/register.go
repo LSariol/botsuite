@@ -8,6 +8,7 @@ import (
 	"github.com/lsariol/botsuite/internal/commands/cmds/catfacts"
 	"github.com/lsariol/botsuite/internal/commands/cmds/chatgpt"
 	"github.com/lsariol/botsuite/internal/commands/cmds/help"
+	"github.com/lsariol/botsuite/internal/commands/cmds/letterboxd"
 	"github.com/lsariol/botsuite/internal/commands/cmds/oneuppuzzle"
 	"github.com/lsariol/botsuite/internal/commands/cmds/ping"
 	"github.com/lsariol/botsuite/internal/commands/cmds/randomdog"
@@ -28,6 +29,7 @@ func (r *Registry) RegisterAll() {
 	r.Register(oneuppuzzle.OneUpPuzzle{})
 	r.Register(settings.Settings{})
 	r.Register(chatgpt.ChatGPT{})
+	r.Register(letterboxd.Letterboxd{})
 
 }
 
