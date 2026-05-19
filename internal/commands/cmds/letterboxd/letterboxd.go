@@ -14,11 +14,13 @@ import (
 
 type Letterboxd struct{}
 
-func (Letterboxd) Name() string        { return "letterboxd" }
-func (Letterboxd) Aliases() []string   { return []string{"lb"} }
-func (Letterboxd) Regexes() []string   { return nil }
-func (Letterboxd) Description() string { return "Link your Letterboxd account so the channel sees your new reviews." }
-func (Letterboxd) Usage() string       { return "!letterboxd watch <username or url> | !letterboxd unwatch" }
+func (Letterboxd) Name() string      { return "letterboxd" }
+func (Letterboxd) Aliases() []string { return []string{"lb"} }
+func (Letterboxd) Regexes() []string { return nil }
+func (Letterboxd) Description() string {
+	return "Link your Letterboxd account so the channel sees your new reviews."
+}
+func (Letterboxd) Usage() string          { return "!letterboxd watch <username or url> | !letterboxd unwatch" }
 func (Letterboxd) Timeout() time.Duration { return 10 * time.Second }
 
 func (Letterboxd) Execute(ctx context.Context, e adapter.Envelope, deps *dependencies.Deps) (adapter.Response, error) {
@@ -66,7 +68,7 @@ func handleWatch(ctx context.Context, e adapter.Envelope, deps *dependencies.Dep
 		return adapter.Response{SuppressReply: true, Error: true}, fmt.Errorf("letterboxd watch: insert: %w", err)
 	}
 
-	return adapter.Response{Text: fmt.Sprintf("@%s subscribed! New Letterboxd reviews from %s will appear in chat.", e.Username, lbUsername)}, nil
+	return adapter.Response{Text: fmt.Sprintf("%s subscribed! New Letterboxd reviews from %s will appear in chat.", e.Username, lbUsername)}, nil
 }
 
 func handleUnwatch(ctx context.Context, e adapter.Envelope, deps *dependencies.Deps) (adapter.Response, error) {
