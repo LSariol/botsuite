@@ -5,9 +5,9 @@ go 1.25.1
 require github.com/gorilla/websocket v1.5.3
 
 require (
-	github.com/LSariol/coveclient v0.1.1
 	github.com/jackc/pgx/v5 v5.7.6
 	github.com/joho/godotenv v1.5.1
+	github.com/lsariol/coveclient v0.2.0
 )
 
 require (

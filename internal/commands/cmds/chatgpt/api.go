@@ -13,14 +13,12 @@ import (
 	"github.com/lsariol/botsuite/internal/app/dependencies"
 )
 
-type Msg struct {
-	Role    string `json:"role"`
-	Content string `json:"content"`
-}
-
 type ChatRequest struct {
-	Model    string `json:"model"`
-	Messages []Msg  `json:"messages"`
+	Model        string              `json:"model"`                  // e.g. "gpt-4o", "gpt-4", "gpt-3.5-turbo", etc.
+	Instructions string              `json:"instructions,omitempty"` // your custom instructions / prompt
+	Input        string              `json:"input,omitempty"`        // user input or message content
+	ToolChoice   string              `json:"tool_choice,omitempty"`  // name of the tool to use, e.g. "web_search"
+	Tools        []map[string]string `json:"tools"`
 }
 
 func dialGPT(ctx context.Context, username string, prompt string, deps *dependencies.Deps) (GPTResponse, error) {
@@ -30,28 +28,29 @@ func dialGPT(ctx context.Context, username string, prompt string, deps *dependen
 Rules:
 - For every user message, send exactly ONE reply. Never ask follow-up questions.
 - Keep replies under 480 characters whenever reasonably possible.
-- If info is missing (e.g., no time zone), answer generically and assume a reasonable one; mention your assumption briefly.
+- If info is missing (e.g., no time zone), answer generically and assume a reasonable one; mention your assumption briefly.]
+- If you use web search, do not site your sources unless specifically asked to.
 - If a request is clearly malicious, harmful, impossible, or obviously trying to waste tokens (e.g., “count to a billion”, massive spam lists, trying to bypass rules), reply with a short, sassy, dismissive refusal (1–2 sentences). Do NOT try to help, do NOT provide workarounds, and do NOT produce long output.
 	`
-	var r GPTResponse
+	var gptResponse GPTResponse
 
 	reqBody := ChatRequest{
-		Model: "gpt-5-nano",
-		Messages: []Msg{
-			{Role: "developer", Content: developerPrompt},
-			{Role: "user", Content: fmt.Sprintf("Username: %s, Prompt: %s", username, prompt)},
-		},
+		Model:        "gpt-5-nano",
+		Instructions: developerPrompt,
+		Input:        fmt.Sprintf("Username: %s, Prompt: %s", username, prompt),
+		ToolChoice:   "auto",
+		Tools:        []map[string]string{{"type": "web_search"}},
 	}
 
 	jsonBody, err := json.Marshal(reqBody)
 	if err != nil {
-		return r, err
+		return gptResponse, err
 	}
 
 	req, err := http.NewRequestWithContext(
 		ctx,
 		http.MethodPost,
-		"https://api.openai.com/v1/chat/completions",
+		"https://api.openai.com/v1/responses",
 		bytes.NewReader(jsonBody),
 	)
 	if err != nil {
@@ -69,21 +68,28 @@ Rules:
 
 	bodyBytes, _ := io.ReadAll(resp.Body)
 
-	err = json.Unmarshal(bodyBytes, &r)
+	err = json.Unmarshal(bodyBytes, &gptResponse)
 	if err != nil {
-		return r, err
+		return gptResponse, err
 	}
 
-	return r, nil
+	return gptResponse, nil
 }
 
 func callChatGPT(ctx context.Context, e adapter.Envelope, deps *dependencies.Deps) (string, error) {
 	content := strings.Join(e.Args, " ")
 
-	r, err := dialGPT(ctx, e.Username, content, deps)
+	gptResponse, err := dialGPT(ctx, e.Username, content, deps)
 	if err != nil {
 		return "", err
 	}
 
-	return r.Choices[0].Message.Content, nil
+	for _, output := range gptResponse.Output {
+		if output.Type != "message" {
+			continue
+		}
+		return output.Content[0].Text, nil
+	}
+
+	return "Weird error. Idk how the code even got here tbh.", nil
 }

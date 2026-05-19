@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/LSariol/coveclient"
+	"github.com/lsariol/coveclient"
 	twitchdb "github.com/lsariol/botsuite/internal/adapters/twitch/database"
 	"github.com/lsariol/botsuite/internal/config"
 )

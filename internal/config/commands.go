@@ -3,7 +3,7 @@ package config
 import (
 	"fmt"
 
-	"github.com/LSariol/coveclient"
+	"github.com/lsariol/coveclient"
 )
 
 type CommandsConfig struct {

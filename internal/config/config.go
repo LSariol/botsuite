@@ -5,7 +5,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/LSariol/coveclient"
+	"github.com/lsariol/coveclient"
 )
 
 type Config struct {

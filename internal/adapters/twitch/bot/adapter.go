@@ -6,7 +6,7 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/LSariol/coveclient"
+	"github.com/lsariol/coveclient"
 	"github.com/lsariol/botsuite/internal/adapters/adapter"
 	"github.com/lsariol/botsuite/internal/adapters/twitch/auth"
 	"github.com/lsariol/botsuite/internal/adapters/twitch/chat"

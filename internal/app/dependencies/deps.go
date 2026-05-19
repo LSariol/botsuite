@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/LSariol/coveclient"
+	"github.com/lsariol/coveclient"
 	"github.com/joho/godotenv"
 	"github.com/lsariol/botsuite/internal/config"
 	"github.com/lsariol/botsuite/internal/database"
@@ -43,9 +43,9 @@ func (d *Deps) Initilize() error {
 
 	var cove *coveclient.Client
 	if prod {
-		cove = coveclient.New(os.Getenv("COVE_CLIENT_URL"), os.Getenv("COVE_CLIENT_SECRET"))
+		cove = coveclient.New(os.Getenv("COVE_CLIENT_URL"), os.Getenv("COVE_CLIENT_SECRET"), "botsuite")
 	} else {
-		cove = coveclient.New(os.Getenv("COVE_CLIENT_URL_DEV"), os.Getenv("COVE_CLIENT_SECRET_DEV"))
+		cove = coveclient.New(os.Getenv("COVE_CLIENT_URL_DEV"), os.Getenv("COVE_CLIENT_SECRET_DEV"), "botsuite")
 	}
 
 	err := cfg.Initilize(cove)

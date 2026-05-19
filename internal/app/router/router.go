@@ -7,26 +7,36 @@ import (
 	"github.com/lsariol/botsuite/internal/app/dependencies"
 	"github.com/lsariol/botsuite/internal/app/registry"
 	"github.com/lsariol/botsuite/internal/commands"
+	"github.com/lsariol/botsuite/internal/feed"
 )
 
 type Router struct {
-	inbound         chan adapter.Envelope
+	inboundCommands chan adapter.Envelope
+	inboundEvents   chan feed.Event
 	adapterRegistry map[string]adapter.Adapter
 	registry        *registry.Registry
+	feed            *feed.Feed
 	rootCtx         context.Context
 }
 
-func NewRouter(ctx context.Context, reg *registry.Registry) *Router {
+func NewRouter(ctx context.Context, reg *registry.Registry, evtFeed *feed.Feed) *Router {
+
 	return &Router{
-		inbound:         make(chan adapter.Envelope, 100),
+		inboundCommands: make(chan adapter.Envelope, 100),
+		inboundEvents:   make(chan feed.Event, 100),
 		adapterRegistry: make(map[string]adapter.Adapter),
 		registry:        reg,
+		feed:            evtFeed,
 		rootCtx:         ctx,
 	}
 }
 
-func (r *Router) Inbound() chan<- adapter.Envelope {
-	return r.inbound
+func (r *Router) InboundCommands() chan<- adapter.Envelope {
+	return r.inboundCommands
+}
+
+func (r *Router) InboundEvents() chan<- feed.Event {
+	return r.inboundEvents
 }
 
 func (r *Router) Run(ctx context.Context, deps *dependencies.Deps) {
@@ -35,7 +45,7 @@ func (r *Router) Run(ctx context.Context, deps *dependencies.Deps) {
 		select {
 		case <-ctx.Done():
 			return
-		case env, ok := <-r.inbound:
+		case env, ok := <-r.inboundCommands:
 			if !ok {
 				return
 			}
@@ -45,8 +55,14 @@ func (r *Router) Run(ctx context.Context, deps *dependencies.Deps) {
 				continue
 			}
 
-			r.Dispatch(ctx, env, cmd, deps)
+			r.DispatchCommand(ctx, env, cmd, deps)
 
+		case event, ok := <-r.inboundEvents:
+			if !ok {
+				return
+			}
+
+			r.DispatchEvent(ctx, event)
 		}
 	}
 }

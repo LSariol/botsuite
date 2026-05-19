@@ -9,11 +9,13 @@ import (
 
 	twitchbot "github.com/lsariol/botsuite/internal/adapters/twitch/bot"
 	twitchdb "github.com/lsariol/botsuite/internal/adapters/twitch/database"
-	"github.com/lsariol/botsuite/internal/runtime/settings"
-
 	"github.com/lsariol/botsuite/internal/app/dependencies"
 	"github.com/lsariol/botsuite/internal/app/registry"
 	"github.com/lsariol/botsuite/internal/app/router"
+	"github.com/lsariol/botsuite/internal/feed"
+	notificationsource "github.com/lsariol/botsuite/internal/feed/sources/notification"
+	notificationserver "github.com/lsariol/botsuite/internal/notification"
+	"github.com/lsariol/botsuite/internal/runtime/settings"
 )
 
 func main() {
@@ -23,7 +25,6 @@ func main() {
 	defer stop()
 
 	deps := dependencies.New(ctx)
-
 	err := deps.Initilize()
 	if err != nil {
 		log.Fatalf("Error loading deps: %v", err)
@@ -36,10 +37,16 @@ func main() {
 
 	// Create Registry
 	var register *registry.Registry = registry.NewRegistry()
-	registry.RegisterAll(register)
+	register.RegisterAll()
+
+	// Create Feed
+	feed := feed.NewFeed()
+	notifSource := notificationsource.New()
 
 	// Create Router
-	var router *router.Router = router.NewRouter(ctx, register)
+	var router *router.Router = router.NewRouter(ctx, register, feed)
+	feed.SetChannel(router.InboundEvents())
+	feed.AddSource(notifSource)
 
 	// Create DBStores
 	var twitchDBStore *twitchdb.Store = twitchdb.NewStore(deps.DB.Pool, deps.DB.Config.ConnectionString)
@@ -50,13 +57,23 @@ func main() {
 	deps.Settings = settingsStore
 
 	//Create Adapter clients
-	var twitchClient *twitchbot.TwitchClient = twitchbot.New(deps.HTTP, deps.Config.Twitch, deps.Cove, deps.Settings, twitchDBStore, router.Inbound(), register.GetReadRegistry())
+	var twitchClient *twitchbot.TwitchClient = twitchbot.New(deps.HTTP, deps.Config.Twitch, deps.Cove, deps.Settings, twitchDBStore, router.InboundCommands(), register.GetReadRegistry())
 
 	// Register Adapters with the router
 	router.RegisterAdapter(twitchClient)
+	//router.RegisterAdapter(discordClient)
+
+	notifServer := notificationserver.NewServer(":8080", notifSource)
+	notifServer.Start()
+	defer notifServer.Shutdown(ctx)
 
 	// Start Router
 	go router.Run(ctx, deps)
+
+	// Start Feed
+	go feed.Run(ctx, deps)
+
+	//Start Broker
 
 	// Start TwitchBot Reading
 	go func() {
@@ -71,65 +88,6 @@ func main() {
 	// RunLiveTests(ctx, twitchClient)
 
 	<-ctx.Done()
+	log.Println("shutting down")
 
 }
-
-// func RunLiveTests(ctx context.Context, c *twitchbot.TwitchClient) {
-
-// 	r := adapter.Response{
-// 		ChannelID: "42217464",
-// 		Text:      newMessage(10),
-// 	}
-// 	r2 := adapter.Response{
-// 		ChannelID: "228428175",
-// 		Text:      newMessage(10),
-// 	}
-// 	r3 := adapter.Response{
-// 		ChannelID: "410570760",
-// 		Text:      newMessage(10),
-// 	}
-
-// 	c.DeliverResponse(ctx, r)
-// 	c.DeliverResponse(ctx, r2)
-// 	c.DeliverResponse(ctx, r3)
-
-// }
-
-// func newMessage(length int) string {
-// 	// each byte = 2 hex chars, so divide by 2 (round up)
-// 	byteLen := (length + 1) / 2
-// 	b := make([]byte, byteLen)
-
-// 	if _, err := io.ReadFull(rand.Reader, b); err != nil {
-// 		panic(err)
-// 	}
-
-// 	hexStr := hex.EncodeToString(b)
-
-// 	// trim to exact requested length (in case of odd number)
-// 	if len(hexStr) > length {
-// 		hexStr = hexStr[:length]
-// 	}
-
-// 	return hexStr
-// }
-
-// func rateTesting(ctx context.Context, c twitchbot.TwitchClient) {
-
-// 	var i int = 1
-// 	var messages int = 10
-// 	for i <= messages {
-// 		r := adapter.Response{
-// 			ChannelID: "42217464",
-// 			Text:      newMessage(500-4) + " (" + strconv.Itoa(i) + ")",
-// 		}
-
-// 		err := c.DeliverResponse(ctx, r)
-// 		if err != nil {
-// 			log.Println(err)
-// 		}
-// 		i++
-// 		time.Sleep(1 * time.Second)
-// 	}
-
-// }

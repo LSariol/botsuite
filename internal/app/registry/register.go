@@ -17,7 +17,7 @@ import (
 )
 
 // Register all functions into the registry
-func RegisterAll(r *Registry) {
+func (r *Registry) RegisterAll() {
 
 	r.Register(catfacts.CatFact{})
 	r.Register(help.Help{})

@@ -2,15 +2,17 @@ package router
 
 import (
 	"context"
+	"log"
 	"time"
 
 	"github.com/lsariol/botsuite/internal/adapters/adapter"
 	"github.com/lsariol/botsuite/internal/app/dependencies"
 	"github.com/lsariol/botsuite/internal/app/middleware"
 	"github.com/lsariol/botsuite/internal/commands"
+	"github.com/lsariol/botsuite/internal/feed"
 )
 
-func (r *Router) Dispatch(parentCtx context.Context, envelope adapter.Envelope, cmd commands.Command, deps *dependencies.Deps) {
+func (r *Router) DispatchCommand(parentCtx context.Context, envelope adapter.Envelope, cmd commands.Command, deps *dependencies.Deps) {
 
 	ctx := parentCtx
 
@@ -49,6 +51,38 @@ func (r *Router) Dispatch(parentCtx context.Context, envelope adapter.Envelope, 
 	response.Success = true
 	r.adapterRegistry[response.Platform].DeliverResponse(response)
 
+}
+
+// DispatchEvent fans a feed.Event out to every subscriber's platform adapter.
+// Add a new case here when a new EventType is introduced.
+func (r *Router) DispatchEvent(ctx context.Context, event feed.Event) {
+	switch event.Type {
+
+	case feed.EventNotification:
+		payload, ok := event.Payload.(feed.NotificationPayload)
+		if !ok {
+			log.Printf("[Router] EventNotification has unexpected payload type %T", event.Payload)
+			return
+		}
+
+		for _, sub := range event.Subscribers {
+			a, ok := r.adapterRegistry[sub.Platform]
+			if !ok {
+				log.Printf("[Router] no adapter registered for platform %q — skipping subscriber (channelID=%s)", sub.Platform, sub.ChannelID)
+				continue
+			}
+			a.DeliverResponse(adapter.Response{
+				Platform:    sub.Platform,
+				ChannelID:   sub.ChannelID,
+				ChannelName: sub.ChannelName,
+				Text:        payload.Message,
+				Success:     true,
+			})
+		}
+
+	default:
+		log.Printf("[Router] unhandled event type %q", event.Type)
+	}
 }
 
 func chain(next middleware.Handler, mws ...middleware.Middleware) middleware.Handler {

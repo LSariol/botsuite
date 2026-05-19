@@ -1,4 +1,4 @@
-package api
+package broker
 
 import (
 	"fmt"
@@ -14,10 +14,10 @@ func NewAPIServer() *APIServer {
 	return &APIServer{}
 }
 
-func (s *APIServer) Initilize() error {
+func (s *APIServer) Initilize() *http.ServeMux {
 	mux := s.defineRoutes()
 	fmt.Println(mux)
-	return nil
+	return mux
 }
 
 func (s *APIServer) Run(address string, mux *http.ServeMux) {
