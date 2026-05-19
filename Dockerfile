@@ -11,4 +11,5 @@ RUN mkdir -p /app/botsuite
 COPY --from=builder /app/botsuite /botsuite
 
 EXPOSE 2400
+ENV NOTIFICATION_PORT=2400
 CMD ["/botsuite"]

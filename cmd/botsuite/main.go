@@ -63,7 +63,11 @@ func main() {
 	router.RegisterAdapter(twitchClient)
 	//router.RegisterAdapter(discordClient)
 
-	notifServer := notificationserver.NewServer(":8080", notifSource)
+	notifPort := os.Getenv("NOTIFICATION_PORT")
+	if notifPort == "" {
+		log.Fatal("NOTIFICATION_PORT is not set")
+	}
+	notifServer := notificationserver.NewServer(":"+notifPort, notifSource)
 	notifServer.Start()
 	defer notifServer.Shutdown(ctx)
 
